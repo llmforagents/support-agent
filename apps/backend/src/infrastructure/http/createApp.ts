@@ -14,6 +14,7 @@ import { adminOnboardingRoutes } from './routes/adminOnboarding'
 import { adminConfigRoutes } from './routes/adminConfig'
 import { widgetConfigRoutes } from './routes/widgetConfig'
 import { widgetSessionRoutes } from './routes/widgetSessions'
+import { widgetStreamRoutes } from './routes/widgetStream'
 
 export function createApp(c: Container): Hono {
   const app = new Hono()
@@ -44,6 +45,7 @@ export function createApp(c: Container): Hono {
   app.route('/v1/admin/config', adminConfigRoutes(c))
   app.route('/v1/widget/config', widgetConfigRoutes(c))
   app.route('/v1/widget/sessions', widgetSessionRoutes(c))
+  app.route('/v1/widget/sessions', widgetStreamRoutes(c))
   app.route('/', healthRoutes(c))
   return app
 }
