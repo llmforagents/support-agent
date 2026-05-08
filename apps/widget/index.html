@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget Dev Harness</title>
+  </head>
+  <body>
+    <h2 style="font-family:sans-serif;padding:1rem;">Widget Dev Harness</h2>
+    <p style="font-family:sans-serif;padding:0 1rem;">
+      The bootstrap script below injects the chat button + iframe into this page.
+    </p>
+
+    <script>
+      // Simulate the site-owner snippet:
+      window.__SITE_KEY__ = 'dev-harness-key-0000000'
+      window.__WIDGET_BASE_URL__ = 'http://localhost:5173'
+    </script>
+    <!-- In dev mode, load bootstrap.ts directly via Vite's module transform -->
+    <script type="module" src="/src/bootstrap.ts"></script>
+  </body>
+</html>

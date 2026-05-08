@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Widget</title>
+    <script>
+      // Injected by the backend at /embed/:siteKey — the template literal is replaced server-side
+      window.__SITE_KEY__ = "{{siteKey}}"
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/embed-app.tsx"></script>
+  </body>
+</html>
