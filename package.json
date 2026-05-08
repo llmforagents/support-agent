@@ -1,0 +1,23 @@
+{
+  "name": "support-llm4agents",
+  "version": "0.1.0-pre",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "pnpm -r --parallel build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "pnpm -r --parallel lint",
+    "test": "pnpm -r run test",
+    "test:ci": "pnpm -r run test:ci",
+    "test:integration": "pnpm --filter backend run test:integration",
+    "audit": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm build && pnpm test:integration",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "dev:widget": "pnpm --filter widget dev"
+  },
+  "packageManager": "pnpm@9.12.0"
+}
