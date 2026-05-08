@@ -7,8 +7,12 @@ import { requestId } from './middleware/requestId'
 import { requestLogger } from './middleware/requestLogger'
 import { errorHandler } from './middleware/errorHandler'
 import { widgetCors, adminCors } from './middleware/cors'
+import { csrf } from './middleware/csrf'
 import { healthRoutes } from './routes/health'
 import { adminAuthRoutes } from './routes/adminAuth'
+import { adminOnboardingRoutes } from './routes/adminOnboarding'
+import { adminConfigRoutes } from './routes/adminConfig'
+import { widgetConfigRoutes } from './routes/widgetConfig'
 
 export function createApp(c: Container): Hono {
   const app = new Hono()
@@ -33,6 +37,11 @@ export function createApp(c: Container): Hono {
   app.use('/v1/widget/*', widgetCors())
   app.use('/v1/admin/*', adminCors(c.env.ADMIN_ORIGIN))
   app.route('/v1/admin/auth', adminAuthRoutes(c))
+  app.use('/v1/admin/onboarding/*', csrf({ secure: c.env.COOKIE_SECURE }))
+  app.use('/v1/admin/config/*', csrf({ secure: c.env.COOKIE_SECURE }))
+  app.route('/v1/admin/onboarding', adminOnboardingRoutes(c))
+  app.route('/v1/admin/config', adminConfigRoutes(c))
+  app.route('/v1/widget/config', widgetConfigRoutes(c))
   app.route('/', healthRoutes(c))
   return app
 }

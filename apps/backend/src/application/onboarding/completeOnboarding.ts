@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { Ok, type Result, type AppError, type CompleteOnboardingInput, DEFAULT_EMBEDDING_DIM, DEFAULT_EMBEDDING_MODEL } from '@support/shared'
+import { type Result, type AppError, type CompleteOnboardingInput, DEFAULT_EMBEDDING_DIM, DEFAULT_EMBEDDING_MODEL } from '@support/shared'
 import type { SiteConfigRow, SiteConfigStorePort } from '../ports'
 
 export type CompleteOnboardingDeps = Readonly<{
