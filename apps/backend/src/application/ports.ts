@@ -1,8 +1,9 @@
 import type {
-  AdminId, MessageId, Result, SessionId, UsdCents, VisitorId,
+  AdminId, MessageId, Result, SessionId, SourceId, UsdCents, VisitorId,
   AppError,
 } from '@support/shared'
 import type { ConversationState, Message, Session } from '../domain/conversation'
+import type { ChunkHit, ChunkInsert, Source, SourceConfig, SourceState, SourceType } from '../domain/source'
 
 // ─── Auth & site ─────────────────────────────────────────────────────
 export type AdminRow = Readonly<{
@@ -93,6 +94,38 @@ export type BroadcastEvent =
 export interface BroadcastPort {
   publish(channel: BroadcastChannel, event: BroadcastEvent): void
   subscribe(channel: BroadcastChannel, handler: (e: BroadcastEvent) => void): () => void
+}
+
+// ─── Knowledge base (sources) ────────────────────────────────────────
+export interface KnowledgeStorePort {
+  createSource(input: { name: string; sourceType: SourceType; config: SourceConfig }): Promise<Result<Source, AppError>>
+  getSource(id: SourceId): Promise<Result<Source, AppError>>
+  listSources(): Promise<Result<readonly Source[], AppError>>
+  updateSourceState(id: SourceId, state: SourceState): Promise<Result<void, AppError>>
+  setActive(id: SourceId, active: boolean): Promise<Result<void, AppError>>
+  deleteSource(id: SourceId): Promise<Result<void, AppError>>
+}
+
+// ─── Vector store (chunks) ────────────────────────────────────────────
+export type SearchOpts = Readonly<{ topK: number; minScore: number; activeSourceIds?: readonly SourceId[] }>
+
+export interface VectorStorePort {
+  upsertChunks(chunks: readonly ChunkInsert[]): Promise<Result<void, AppError>>
+  deleteBySourceBelowGeneration(sourceId: SourceId, generation: number): Promise<Result<void, AppError>>
+  search(query: readonly number[], opts: SearchOpts): Promise<Result<readonly ChunkHit[], AppError>>
+}
+
+// ─── File store ───────────────────────────────────────────────────────
+export interface FileStorePort {
+  put(key: string, data: Uint8Array, contentType: string): Promise<Result<{ ref: string }, AppError>>
+  get(ref: string): Promise<Result<Uint8Array, AppError>>
+  delete(ref: string): Promise<Result<void, AppError>>
+}
+
+// ─── Embedder ─────────────────────────────────────────────────────────
+export interface EmbedderPort {
+  embed(texts: readonly string[], apiKey: string): Promise<Result<readonly (readonly number[])[], AppError>>
+  readonly dimension: number
 }
 
 // ─── LLM proxy adapter ──────────────────────────────────────────────
