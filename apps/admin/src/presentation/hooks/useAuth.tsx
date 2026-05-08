@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
 
   useEffect(() => {
     void refresh()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // refresh is stable (useCallback with no deps that change) — intentional empty dep array
   }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
