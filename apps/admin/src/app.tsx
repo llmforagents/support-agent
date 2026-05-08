@@ -2,11 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/presentation/hooks/useAuth'
 import { Login } from '@/presentation/routes/Login'
 import { Onboarding } from '@/presentation/routes/Onboarding'
-
-// Lazy placeholder for Conversations — replaced in T47
-function Conversations(): React.JSX.Element {
-  return <div className="p-8">Conversations (stub)</div>
-}
+import { Conversations } from '@/presentation/routes/Conversations'
 
 function RequireAuth({ children }: { readonly children: React.JSX.Element }): React.JSX.Element {
   const { auth } = useAuth()
