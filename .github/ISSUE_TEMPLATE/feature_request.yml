@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a new feature or enhancement.
+title: "feat: <short description>"
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve support-llm4agents!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the pain point or gap this feature addresses.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature you would like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you have considered?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Roadmap phase
+      description: Which roadmap phase does this belong to?
+      options:
+        - P1 (v0.1.0) — chat widget + admin
+        - P2 (v0.2.0) — knowledge base + RAG
+        - P3 (v0.3.0) — MySQL + handoff + operator mode
+        - P4 (v0.4.0) — MCP + metrics + Cloudflare
+        - Future / unscoped
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, links, or any other context.
+    validations:
+      required: false
