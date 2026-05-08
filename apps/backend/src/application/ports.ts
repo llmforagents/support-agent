@@ -90,6 +90,8 @@ export type BroadcastEvent =
   | { type: 'admin_status'; online: boolean }
   | { type: 'closed'; reason: string }
   | { type: 'error'; error: { code: string; message: string } }
+  | { type: 'source_progress'; sourceId: SourceId; processed: number; total: number }
+  | { type: 'source_state'; sourceId: SourceId; status: string }
 
 export interface BroadcastPort {
   publish(channel: BroadcastChannel, event: BroadcastEvent): void

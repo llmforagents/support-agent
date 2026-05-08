@@ -48,8 +48,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
     currentGeneration,
     pendingGeneration: nextGen,
   })
-  // T87 will add source_state / source_progress to BroadcastEvent — cast until then
-  deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ingesting' } as never)
+  deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ingesting' })
 
   const extractRes = await deps.extractChunks(src.config, deps.fileStore)
   if (!extractRes.ok) {
@@ -59,7 +58,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
       failedAt: new Date(),
       currentGeneration,
     })
-    deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'error' } as never)
+    deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'error' })
     return extractRes
   }
 
@@ -86,7 +85,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
         failedAt: new Date(),
         currentGeneration,
       })
-      deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'error' } as never)
+      deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'error' })
       return Err({ kind: 'embedding_provider_failed', cause })
     }
     const inserts: ChunkInsert[] = batch.map((c, j) => {
@@ -122,7 +121,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
       currentGeneration,
       pendingGeneration: nextGen,
     })
-    deps.broadcast.publish('admin_inbox', { type: 'source_progress', sourceId, processed, total } as never)
+    deps.broadcast.publish('admin_inbox', { type: 'source_progress', sourceId, processed, total })
   }
 
   await deps.knowledgeStore.updateSourceState(sourceId, {
@@ -131,7 +130,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
     chunkCount: total,
     currentGeneration: nextGen,
   })
-  deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ready' } as never)
+  deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ready' })
 
   // Cleanup stale chunks from previous generations (fire-and-forget)
   void deps.vectorStore.deleteBySourceBelowGeneration(sourceId, nextGen)
