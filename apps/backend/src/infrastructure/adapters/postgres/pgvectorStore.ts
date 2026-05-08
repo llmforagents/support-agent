@@ -71,6 +71,39 @@ export class PgvectorStore implements VectorStorePort {
     }
   }
 
+  async previewBySource(sourceId: SourceId, limit: number): Promise<Result<readonly ChunkHit[], AppError>> {
+    type PreviewRow = {
+      id: string
+      source_id: string
+      source_name: string
+      text: string
+      metadata: Record<string, unknown>
+    }
+    try {
+      const sql = `
+        SELECT c.id, c.source_id, s.name AS source_name, c.text, c.metadata
+        FROM chunks c
+        JOIN sources s ON s.id = c.source_id
+        WHERE c.source_id = $1
+          AND c.ingest_generation = (s.state->>'currentGeneration')::bigint
+        ORDER BY c.chunk_index ASC
+        LIMIT $2
+      `
+      const r = await this.pool.query<PreviewRow>(sql, [sourceId, limit])
+      const hits: ChunkHit[] = r.rows.map((row) => ({
+        id: ChunkId(row.id),
+        sourceId: SourceId(row.source_id),
+        sourceName: row.source_name,
+        text: row.text,
+        score: 1.0,
+        metadata: row.metadata ?? {},
+      }))
+      return Ok(hits)
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+  }
+
   async search(
     query: readonly number[],
     opts: SearchOpts,

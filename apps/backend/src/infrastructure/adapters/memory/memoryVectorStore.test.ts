@@ -211,6 +211,76 @@ describe('MemoryVectorStore', () => {
     expect(r.value[0]?.sourceName).toBe('My Knowledge Base')
   })
 
+  it('previewBySource returns chunks ordered by chunkIndex', async () => {
+    const ks = new MemoryKnowledgeStore()
+    const vs = new MemoryVectorStore(ks)
+    const src = await makeSource(ks, 'Preview')
+    // Set source to ready at generation 1
+    await ks.updateSourceState(src.id, { status: 'ready', currentGeneration: 1, ingestedAt: new Date(), chunkCount: 3 })
+    await vs.upsertChunks([
+      makeChunk(src.id, 2, V_C, 1),
+      makeChunk(src.id, 0, V_A, 1),
+      makeChunk(src.id, 1, V_B, 1),
+    ])
+    const r = await vs.previewBySource(src.id, 10)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(3)
+    expect(r.value[0]?.text).toBe('chunk text 0')
+    expect(r.value[1]?.text).toBe('chunk text 1')
+    expect(r.value[2]?.text).toBe('chunk text 2')
+  })
+
+  it('previewBySource respects limit', async () => {
+    const ks = new MemoryKnowledgeStore()
+    const vs = new MemoryVectorStore(ks)
+    const src = await makeSource(ks, 'Limit')
+    await ks.updateSourceState(src.id, { status: 'ready', currentGeneration: 1, ingestedAt: new Date(), chunkCount: 3 })
+    await vs.upsertChunks([
+      makeChunk(src.id, 0, V_A, 1),
+      makeChunk(src.id, 1, V_B, 1),
+      makeChunk(src.id, 2, V_C, 1),
+    ])
+    const r = await vs.previewBySource(src.id, 2)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(2)
+  })
+
+  it('previewBySource only returns chunks at currentGeneration', async () => {
+    const ks = new MemoryKnowledgeStore()
+    const vs = new MemoryVectorStore(ks)
+    const src = await makeSource(ks, 'GenFilter')
+    // Source is at generation 2; old gen-1 chunks should be excluded
+    await ks.updateSourceState(src.id, { status: 'ready', currentGeneration: 2, ingestedAt: new Date(), chunkCount: 1 })
+    await vs.upsertChunks([
+      makeChunk(src.id, 0, V_A, 1), // stale
+      makeChunk(src.id, 1, V_B, 2), // current
+    ])
+    const r = await vs.previewBySource(src.id, 10)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(1)
+    expect(r.value[0]?.text).toBe('chunk text 1')
+  })
+
+  it('previewBySource returns score=1.0 for all hits', async () => {
+    const ks = new MemoryKnowledgeStore()
+    const vs = new MemoryVectorStore(ks)
+    const src = await makeSource(ks, 'Score1')
+    await ks.updateSourceState(src.id, { status: 'ready', currentGeneration: 1, ingestedAt: new Date(), chunkCount: 2 })
+    await vs.upsertChunks([
+      makeChunk(src.id, 0, V_A, 1),
+      makeChunk(src.id, 1, V_B, 1),
+    ])
+    const r = await vs.previewBySource(src.id, 10)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    for (const hit of r.value) {
+      expect(hit.score).toBe(1.0)
+    }
+  })
+
   it('search across 2 sources with 5 chunks respects topK', async () => {
     const ks = new MemoryKnowledgeStore()
     const vs = new MemoryVectorStore(ks)

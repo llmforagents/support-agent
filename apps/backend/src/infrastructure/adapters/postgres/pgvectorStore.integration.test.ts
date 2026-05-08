@@ -216,6 +216,77 @@ describe('PgvectorStore @integration', () => {
     expect(hit.sourceName).toBe('Source A')
   })
 
+  it('previewBySource returns chunks ordered by chunkIndex', async () => {
+    const knowledgeStore = new PgKnowledgeStore(pg.pool)
+    const vectorStore = new PgvectorStore(pg.pool)
+
+    const sourceId = await createReadySource(knowledgeStore, 'Preview Source', 1)
+    const chunk0 = makeChunk(sourceId, 0, axisVector(0))
+    const chunk1 = makeChunk(sourceId, 1, axisVector(1))
+    const chunk2 = makeChunk(sourceId, 2, axisVector(2))
+    // Insert out-of-order to verify ordering is by chunk_index, not insert order
+    await vectorStore.upsertChunks([chunk2, chunk0, chunk1])
+
+    const result = await vectorStore.previewBySource(SourceId(sourceId), 10)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.value).toHaveLength(3)
+    expect(result.value[0]?.text).toBe(chunk0.text)
+    expect(result.value[1]?.text).toBe(chunk1.text)
+    expect(result.value[2]?.text).toBe(chunk2.text)
+  })
+
+  it('previewBySource respects limit', async () => {
+    const knowledgeStore = new PgKnowledgeStore(pg.pool)
+    const vectorStore = new PgvectorStore(pg.pool)
+
+    const sourceId = await createReadySource(knowledgeStore, 'Limit Source', 1)
+    await vectorStore.upsertChunks([
+      makeChunk(sourceId, 0, axisVector(0)),
+      makeChunk(sourceId, 1, axisVector(1)),
+      makeChunk(sourceId, 2, axisVector(2)),
+    ])
+
+    const result = await vectorStore.previewBySource(SourceId(sourceId), 2)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value).toHaveLength(2)
+  })
+
+  it('previewBySource only returns chunks at currentGeneration', async () => {
+    const knowledgeStore = new PgKnowledgeStore(pg.pool)
+    const vectorStore = new PgvectorStore(pg.pool)
+
+    // Source is at generation 2
+    const sourceId = await createReadySource(knowledgeStore, 'GenFilter Source', 2)
+
+    // Insert stale gen-1 chunk and current gen-2 chunk
+    const staleChunk = makeChunk(sourceId, 0, axisVector(0), 1)
+    const currentChunk = makeChunk(sourceId, 1, axisVector(1), 2)
+    await vectorStore.upsertChunks([staleChunk, currentChunk])
+
+    const result = await vectorStore.previewBySource(SourceId(sourceId), 10)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.value).toHaveLength(1)
+    expect(result.value[0]?.text).toBe(currentChunk.text)
+  })
+
+  it('previewBySource returns score=1.0', async () => {
+    const knowledgeStore = new PgKnowledgeStore(pg.pool)
+    const vectorStore = new PgvectorStore(pg.pool)
+
+    const sourceId = await createReadySource(knowledgeStore, 'Score Source', 1)
+    await vectorStore.upsertChunks([makeChunk(sourceId, 0, axisVector(0))])
+
+    const result = await vectorStore.previewBySource(SourceId(sourceId), 5)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value[0]?.score).toBe(1.0)
+  })
+
   it('upsertChunks stores and retrieves metadata', async () => {
     const knowledgeStore = new PgKnowledgeStore(pg.pool)
     const vectorStore = new PgvectorStore(pg.pool)

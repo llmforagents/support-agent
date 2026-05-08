@@ -115,6 +115,7 @@ export interface VectorStorePort {
   upsertChunks(chunks: readonly ChunkInsert[]): Promise<Result<void, AppError>>
   deleteBySourceBelowGeneration(sourceId: SourceId, generation: number): Promise<Result<void, AppError>>
   search(query: readonly number[], opts: SearchOpts): Promise<Result<readonly ChunkHit[], AppError>>
+  previewBySource(sourceId: SourceId, limit: number): Promise<Result<readonly ChunkHit[], AppError>>
 }
 
 // ─── File store ───────────────────────────────────────────────────────

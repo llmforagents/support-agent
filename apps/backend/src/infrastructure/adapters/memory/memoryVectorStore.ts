@@ -38,6 +38,28 @@ export class MemoryVectorStore implements VectorStorePort {
     return Promise.resolve(Ok(undefined))
   }
 
+  async previewBySource(sourceId: SourceId, limit: number): Promise<Result<readonly ChunkHit[], AppError>> {
+    const sourceResult = await this.knowledgeStore.getSource(sourceId)
+    if (!sourceResult.ok) return sourceResult
+    const src = sourceResult.value
+    const currentGeneration = src.state.currentGeneration
+
+    const chunks = Array.from(this.chunks.values())
+      .filter((c) => c.sourceId === sourceId && c.ingestGeneration === currentGeneration)
+      .sort((a, b) => a.chunkIndex - b.chunkIndex)
+      .slice(0, limit)
+
+    const hits: ChunkHit[] = chunks.map((c) => ({
+      id: c.id,
+      sourceId: c.sourceId,
+      sourceName: src.name,
+      text: c.text,
+      score: 1.0,
+      metadata: c.metadata,
+    }))
+    return Promise.resolve(Ok(hits))
+  }
+
   async search(query: readonly number[], opts: SearchOpts): Promise<Result<readonly ChunkHit[], AppError>> {
     // Determine which source IDs to consider
     const allowedSourceIds: Set<string> | null = opts.activeSourceIds
