@@ -5,7 +5,7 @@ import { MemoryKnowledgeStore } from '../../infrastructure/adapters/memory/memor
 import { MemoryVectorStore } from '../../infrastructure/adapters/memory/memoryVectorStore'
 import { MemorySiteConfigStore } from '../../infrastructure/adapters/memory/memorySiteConfigStore'
 import { MemoryEmbedder } from '../../infrastructure/adapters/memory/memoryEmbedder'
-import { ChunkId, SourceId, Ok, Err } from '@support/shared'
+import { ChunkId, Ok, Err } from '@support/shared'
 import type { EmbedderPort } from '../ports'
 
 const DIM = 8

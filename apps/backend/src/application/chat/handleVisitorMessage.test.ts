@@ -7,7 +7,7 @@ import { MemoryBroadcast } from '../../infrastructure/adapters/memory/memoryBroa
 import { MemoryEmbedder } from '../../infrastructure/adapters/memory/memoryEmbedder'
 import { MemoryVectorStore } from '../../infrastructure/adapters/memory/memoryVectorStore'
 import { MemoryKnowledgeStore } from '../../infrastructure/adapters/memory/memoryKnowledgeStore'
-import { VisitorId, UsdCents, ChunkId, SourceId } from '@support/shared'
+import { VisitorId, UsdCents, ChunkId } from '@support/shared'
 import type { EmbedderPort, LlmPort } from '../ports'
 import type { ChatDeps } from './handleVisitorMessage'
 
