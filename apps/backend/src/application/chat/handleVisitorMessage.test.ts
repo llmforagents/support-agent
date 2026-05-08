@@ -23,6 +23,7 @@ async function setup() {
   if (!session.ok) throw new Error('seed')
   const llm: LlmPort = {
     async *chatStream() {
+      await Promise.resolve()
       yield { type: 'text', delta: 'hello' }
       yield { type: 'text', delta: ' world' }
       yield { type: 'done', usage: { promptTokens: 5, completionTokens: 2 }, costCents: UsdCents(1) }

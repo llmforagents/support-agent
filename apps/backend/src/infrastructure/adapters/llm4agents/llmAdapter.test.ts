@@ -3,6 +3,7 @@ import { Llm4AgentsLlmAdapter } from './llmAdapter'
 
 function fakeStream(events: Array<{ type: 'text' | 'done'; content?: string; usage?: unknown }>) {
   return (async function* () {
+    await Promise.resolve()
     for (const e of events) yield e
   })()
 }
