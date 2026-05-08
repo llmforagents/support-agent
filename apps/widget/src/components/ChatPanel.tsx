@@ -4,6 +4,7 @@ import type { ChatMessage, WidgetConfig } from '../types'
 import { Header } from './Header'
 import { MessageBubble } from './MessageBubble'
 import { InputArea } from './InputArea'
+import { t } from '../lib/i18n'
 
 export type ChatPanelProps = Readonly<{
   config: WidgetConfig
@@ -74,7 +75,7 @@ export function ChatPanel({
               fontSize: '14px',
             }}
           >
-            <p>¡Hola! ¿En qué podemos ayudarte?</p>
+            <p>{t('widget.greeting')}</p>
           </div>
         )}
 

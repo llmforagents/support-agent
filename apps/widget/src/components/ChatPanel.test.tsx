@@ -97,7 +97,8 @@ describe('ChatPanel', () => {
     )
 
     const textarea = screen.getByPlaceholderText(/type a message/i)
-    const sendButton = screen.getByRole('button', { name: /send message/i })
+    // aria-label is the i18n 'widget.send' key — matches 'Send' or 'Enviar'
+    const sendButton = screen.getByRole('button', { name: /send|enviar/i })
 
     fireEvent.input(textarea, { target: { value: 'Test message' } })
     fireEvent.click(sendButton)
@@ -117,7 +118,8 @@ describe('ChatPanel', () => {
         onClose={onClose}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /close chat/i }))
+    // aria-label is the i18n 'widget.close' key — matches 'Close' or 'Cerrar'
+    fireEvent.click(screen.getByRole('button', { name: /close|cerrar/i }))
     expect(onClose).toHaveBeenCalledOnce()
   })
 
@@ -147,6 +149,7 @@ describe('ChatPanel', () => {
         onClose={vi.fn()}
       />,
     )
-    expect(screen.getByText(/¡Hola!/)).toBeInTheDocument()
+    // Greeting comes from i18n — match either Spanish or English
+    expect(screen.getByText(/hola|hello/i)).toBeInTheDocument()
   })
 })

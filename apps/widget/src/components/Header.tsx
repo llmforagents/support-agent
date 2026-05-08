@@ -1,4 +1,5 @@
 import type { JSX } from 'preact'
+import { t } from '../lib/i18n'
 
 export type HeaderProps = Readonly<{
   siteName: string
@@ -24,7 +25,7 @@ export function Header({ siteName, primaryColor, adminOnline, onClose }: HeaderP
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontWeight: 600, fontSize: '15px' }}>{siteName}</span>
         <span
-          title={adminOnline ? 'Agent online' : 'Agent offline'}
+          title={adminOnline ? t('widget.statusOnline') : t('widget.statusOffline')}
           style={{
             width: '8px',
             height: '8px',
@@ -36,7 +37,7 @@ export function Header({ siteName, primaryColor, adminOnline, onClose }: HeaderP
       </div>
       <button
         type="button"
-        aria-label="Close chat"
+        aria-label={t('widget.close')}
         onClick={onClose}
         style={{
           background: 'transparent',

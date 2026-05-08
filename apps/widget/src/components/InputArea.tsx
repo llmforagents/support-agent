@@ -1,6 +1,7 @@
 import type { JSX } from 'preact'
 import { useState } from 'preact/hooks'
 import { MAX_VISITOR_MESSAGE_LEN } from '../constants'
+import { t } from '../lib/i18n'
 
 export type InputAreaProps = Readonly<{
   disabled: boolean
@@ -45,7 +46,7 @@ export function InputArea({ disabled, primaryColor, onSend }: InputAreaProps): J
           onInput={(e) => { setValue((e.target as HTMLTextAreaElement).value) }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          placeholder="Type a message…"
+          placeholder={t('widget.placeholder')}
           maxLength={MAX_VISITOR_MESSAGE_LEN}
           rows={1}
           style={{
@@ -70,7 +71,7 @@ export function InputArea({ disabled, primaryColor, onSend }: InputAreaProps): J
       </div>
       <button
         type="button"
-        aria-label="Send message"
+        aria-label={t('widget.send')}
         disabled={disabled || value.trim().length === 0}
         onClick={submit}
         style={{

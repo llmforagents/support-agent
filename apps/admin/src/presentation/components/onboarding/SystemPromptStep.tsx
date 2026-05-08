@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '@/presentation/components/ui/button'
 import { Label } from '@/presentation/components/ui/label'
 import { apiClient, ApiError } from '@/infrastructure/apiClient'
+import { t } from '@/lib/i18n'
 
 interface SystemPromptStepProps {
   readonly onNext: (data: { systemPrompt: string; embedSnippet: string }) => void
@@ -41,9 +42,9 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
       onNext({ systemPrompt, embedSnippet: result.embedSnippet })
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(`Failed to save configuration (${err.status.toString()}).`)
+        setError(`${t('systemPrompt.error.generic')} (${err.status.toString()})`)
       } else {
-        setError('Something went wrong. Please try again.')
+        setError(t('systemPrompt.error.generic'))
       }
     } finally {
       setLoading(false)
@@ -53,17 +54,15 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">System Prompt</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Define how your AI support agent should behave.
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">{t('systemPrompt.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('systemPrompt.description')}</p>
       </div>
       <form
         onSubmit={(e) => { void handleSubmit(e) }}
         className="space-y-4"
       >
         <div className="space-y-2">
-          <Label htmlFor="sp-prompt">System prompt</Label>
+          <Label htmlFor="sp-prompt">{t('systemPrompt.label')}</Label>
           <textarea
             id="sp-prompt"
             required
@@ -74,13 +73,13 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
             onChange={(e) => { setSystemPrompt(e.target.value) }}
             className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <p className="text-xs text-gray-400">{systemPrompt.length}/8000 characters</p>
+          <p className="text-xs text-gray-400">{systemPrompt.length}/8000 {t('systemPrompt.charCount')}</p>
         </div>
         {error !== null && (
           <p role="alert" className="text-sm text-red-600">{error}</p>
         )}
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Saving…' : 'Save & continue'}
+          {loading ? t('systemPrompt.submitting') : t('systemPrompt.submit')}
         </Button>
       </form>
     </div>

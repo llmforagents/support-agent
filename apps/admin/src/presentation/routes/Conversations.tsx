@@ -4,6 +4,7 @@ import { apiClient } from '@/infrastructure/apiClient'
 import { useAuth } from '@/presentation/hooks/useAuth'
 import { Button } from '@/presentation/components/ui/button'
 import { cn } from '@/lib/cn'
+import { t } from '@/lib/i18n'
 
 interface SiteConfigResponse {
   readonly siteName?: string
@@ -48,7 +49,7 @@ export function Conversations(): React.JSX.Element {
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-gray-900">{siteName}</span>
-          <span className="text-xs text-gray-400">Support Dashboard</span>
+          <span className="text-xs text-gray-400">{t('conversations.supportDashboard')}</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-xs text-gray-500">{adminEmail}</span>
@@ -57,7 +58,7 @@ export function Conversations(): React.JSX.Element {
             size="sm"
             onClick={() => { void logout() }}
           >
-            Sign out
+            {t('conversations.signOut')}
           </Button>
         </div>
       </header>
@@ -68,15 +69,15 @@ export function Conversations(): React.JSX.Element {
         <aside className="flex w-64 flex-col border-r border-gray-200 bg-gray-50">
           <div className="border-b border-gray-200 px-4 py-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Conversations
+              {t('conversations.sectionTitle')}
             </h2>
           </div>
           <div className="flex-1 overflow-y-auto">
             {sessions.isLoading && (
-              <p className="px-4 py-3 text-xs text-gray-400">Loading…</p>
+              <p className="px-4 py-3 text-xs text-gray-400">{t('conversations.loading')}</p>
             )}
             {sessions.isError && (
-              <p className="px-4 py-3 text-xs text-red-500">Failed to load sessions.</p>
+              <p className="px-4 py-3 text-xs text-red-500">{t('conversations.loadError')}</p>
             )}
             {sessions.data?.sessions.map((s) => (
               <button
@@ -89,12 +90,12 @@ export function Conversations(): React.JSX.Element {
               >
                 <p className="truncate text-sm text-gray-800">{s.visitorId}</p>
                 <p className="mt-0.5 truncate text-xs text-gray-400">
-                  {s.lastMessage ?? 'No messages yet'}
+                  {s.lastMessage ?? t('conversations.noMessages')}
                 </p>
               </button>
             ))}
             {sessions.data?.sessions.length === 0 && (
-              <p className="px-4 py-3 text-xs text-gray-400">No conversations yet.</p>
+              <p className="px-4 py-3 text-xs text-gray-400">{t('conversations.empty')}</p>
             )}
           </div>
         </aside>
@@ -102,19 +103,19 @@ export function Conversations(): React.JSX.Element {
         {/* Middle: conversation thread (P1 stub) */}
         <main className="flex flex-1 flex-col items-center justify-center bg-white">
           {selectedId === null ? (
-            <p className="text-sm text-gray-400">Select a conversation to view messages.</p>
+            <p className="text-sm text-gray-400">{t('conversations.selectPrompt')}</p>
           ) : (
-            <p className="text-sm text-gray-400">Thread for session {selectedId} (P1 stub)</p>
+            <p className="text-sm text-gray-400">{t('conversations.threadStub')} {selectedId} (P1 stub)</p>
           )}
         </main>
 
         {/* Right: visitor meta (P1 stub) */}
         <aside className="w-64 border-l border-gray-200 bg-gray-50 p-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Visitor Info
+            {t('conversations.visitorInfo')}
           </h2>
           <p className="mt-3 text-xs text-gray-400">
-            Select a conversation to see visitor details.
+            {t('conversations.visitorInfoPrompt')}
           </p>
         </aside>
       </div>

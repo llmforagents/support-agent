@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/pre
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
 import { ApiError } from '@/infrastructure/apiClient'
+import { t } from '@/lib/i18n'
 
 export function Login(): React.JSX.Element {
   const { login } = useAuth()
@@ -24,9 +25,9 @@ export function Login(): React.JSX.Element {
       void navigate('/conversations')
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setError('Invalid email or password.')
+        setError(t('login.error.invalidCredentials'))
       } else {
-        setError('Something went wrong. Please try again.')
+        setError(t('login.error.generic'))
       }
     } finally {
       setLoading(false)
@@ -37,8 +38,8 @@ export function Login(): React.JSX.Element {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Admin Login</CardTitle>
-          <CardDescription>Sign in to manage your support widget.</CardDescription>
+          <CardTitle>{t('login.title')}</CardTitle>
+          <CardDescription>{t('login.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -48,7 +49,7 @@ export function Login(): React.JSX.Element {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('login.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -59,7 +60,7 @@ export function Login(): React.JSX.Element {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('login.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -75,7 +76,7 @@ export function Login(): React.JSX.Element {
               </p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? t('login.submitting') : t('login.submit')}
             </Button>
           </form>
         </CardContent>

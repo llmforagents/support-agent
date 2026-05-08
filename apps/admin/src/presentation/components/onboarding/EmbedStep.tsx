@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/presentation/components/ui/button'
+import { t } from '@/lib/i18n'
 
 interface EmbedStepProps {
   readonly embedSnippet: string | undefined
@@ -21,9 +22,9 @@ export function EmbedStep({ embedSnippet }: EmbedStepProps): React.JSX.Element {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Embed the Widget</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t('embed.title')}</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Copy the snippet below and paste it before the closing{' '}
+          {t('embed.description')}{' '}
           <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">&lt;/body&gt;</code> tag of your site.
         </p>
       </div>
@@ -37,13 +38,13 @@ export function EmbedStep({ embedSnippet }: EmbedStepProps): React.JSX.Element {
         className="w-full"
         onClick={() => { void copySnippet() }}
       >
-        {copied ? 'Copied!' : 'Copy snippet'}
+        {copied ? t('embed.copied') : t('embed.copy')}
       </Button>
       <Button
         className="w-full"
         onClick={() => { void navigate('/conversations') }}
       >
-        Go to dashboard
+        {t('embed.goToDashboard')}
       </Button>
     </div>
   )

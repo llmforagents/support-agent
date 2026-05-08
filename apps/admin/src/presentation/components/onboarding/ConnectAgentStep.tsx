@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '@/presentation/components/ui/button'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
+import { t } from '@/lib/i18n'
 
 interface ConnectAgentData {
   readonly llm4agentsApiKey: string
@@ -24,24 +25,22 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Connect Your Agent</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Enter your LLM4Agents API key and choose the model for your support agent.
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">{t('connectAgent.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('connectAgent.description')}</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="ca-api-key">LLM4Agents API key</Label>
+          <Label htmlFor="ca-api-key">{t('connectAgent.apiKey')}</Label>
           <Input
             id="ca-api-key"
             type="password"
             required
-            placeholder="sk-proxy-..."
+            placeholder={t('connectAgent.apiKeyPlaceholder')}
             value={apiKey}
             onChange={(e) => { setApiKey(e.target.value) }}
           />
           <p className="text-xs text-gray-400">
-            Get your key from{' '}
+            {t('connectAgent.apiKeyHint')}{' '}
             <a
               href="https://llm4agents.com"
               target="_blank"
@@ -53,7 +52,7 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ca-model">Model</Label>
+          <Label htmlFor="ca-model">{t('connectAgent.model')}</Label>
           <Input
             id="ca-model"
             type="text"
@@ -63,7 +62,7 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
           />
         </div>
         <Button type="submit" className="w-full">
-          Continue
+          {t('connectAgent.submit')}
         </Button>
       </form>
     </div>

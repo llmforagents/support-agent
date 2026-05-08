@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '@/presentation/components/ui/button'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
+import { t } from '@/lib/i18n'
 
 interface SiteConfigData {
   readonly siteName: string
@@ -24,25 +25,23 @@ export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Eleme
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Site Configuration</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Customise how your support widget looks on your site.
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">{t('siteConfig.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('siteConfig.description')}</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="sc-name">Site name</Label>
+          <Label htmlFor="sc-name">{t('siteConfig.siteName')}</Label>
           <Input
             id="sc-name"
             type="text"
             required
-            placeholder="Acme Support"
+            placeholder={t('siteConfig.siteNamePlaceholder')}
             value={siteName}
             onChange={(e) => { setSiteName(e.target.value) }}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="sc-color">Primary colour</Label>
+          <Label htmlFor="sc-color">{t('siteConfig.primaryColor')}</Label>
           <div className="flex items-center gap-3">
             <input
               id="sc-color"
@@ -61,7 +60,7 @@ export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Eleme
           </div>
         </div>
         <Button type="submit" className="w-full">
-          Continue
+          {t('siteConfig.submit')}
         </Button>
       </form>
     </div>

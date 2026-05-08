@@ -3,6 +3,7 @@ import { Button } from '@/presentation/components/ui/button'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
 import { apiClient, ApiError } from '@/infrastructure/apiClient'
+import { t } from '@/lib/i18n'
 
 interface CreateAdminStepProps {
   readonly onNext: () => void
@@ -23,9 +24,9 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
       onNext()
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setError('An admin account already exists.')
+        setError(t('createAdmin.error.conflict'))
       } else {
-        setError('Failed to create account. Please try again.')
+        setError(t('createAdmin.error.generic'))
       }
     } finally {
       setLoading(false)
@@ -35,17 +36,15 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Create Admin Account</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          This will be your login for the support dashboard.
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">{t('createAdmin.title')}</h2>
+        <p className="mt-1 text-sm text-gray-500">{t('createAdmin.description')}</p>
       </div>
       <form
         onSubmit={(e) => { void handleSubmit(e) }}
         className="space-y-4"
       >
         <div className="space-y-2">
-          <Label htmlFor="ca-email">Email</Label>
+          <Label htmlFor="ca-email">{t('createAdmin.email')}</Label>
           <Input
             id="ca-email"
             type="email"
@@ -55,7 +54,7 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ca-password">Password</Label>
+          <Label htmlFor="ca-password">{t('createAdmin.password')}</Label>
           <Input
             id="ca-password"
             type="password"
@@ -64,13 +63,13 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
             value={password}
             onChange={(e) => { setPassword(e.target.value) }}
           />
-          <p className="text-xs text-gray-400">Minimum 8 characters</p>
+          <p className="text-xs text-gray-400">{t('createAdmin.passwordHint')}</p>
         </div>
         {error !== null && (
           <p role="alert" className="text-sm text-red-600">{error}</p>
         )}
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creating account…' : 'Create account'}
+          {loading ? t('createAdmin.submitting') : t('createAdmin.submit')}
         </Button>
       </form>
     </div>
