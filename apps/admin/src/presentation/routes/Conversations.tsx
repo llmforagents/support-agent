@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/infrastructure/apiClient'
 import { useAuth } from '@/presentation/hooks/useAuth'
 import { Button } from '@/presentation/components/ui/button'
+import { Sidebar } from '@/presentation/components/Sidebar'
 import { cn } from '@/lib/cn'
 import { t } from '@/lib/i18n'
 
@@ -63,8 +64,9 @@ export function Conversations(): React.JSX.Element {
         </div>
       </header>
 
-      {/* 3-column layout */}
+      {/* Nav + 3-column layout */}
       <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
         {/* Left: sessions list */}
         <aside className="flex w-64 flex-col border-r border-gray-200 bg-gray-50">
           <div className="border-b border-gray-200 px-4 py-3">

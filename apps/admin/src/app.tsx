@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/presentation/hooks/useAuth'
 import { Login } from '@/presentation/routes/Login'
 import { Onboarding } from '@/presentation/routes/Onboarding'
 import { Conversations } from '@/presentation/routes/Conversations'
+import { KnowledgeBase } from '@/presentation/routes/KnowledgeBase'
 
 function RequireAuth({ children }: { readonly children: React.JSX.Element }): React.JSX.Element {
   const { auth } = useAuth()
@@ -48,6 +49,14 @@ export function App(): React.JSX.Element {
             element={
               <RequireAuth>
                 <Conversations />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/knowledge-base"
+            element={
+              <RequireAuth>
+                <KnowledgeBase />
               </RequireAuth>
             }
           />

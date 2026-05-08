@@ -88,6 +88,27 @@ const messages = {
   'conversations.visitorInfo': 'Info del Visitante',
   'conversations.visitorInfoPrompt': 'Seleccioná una conversación para ver los detalles del visitante.',
   'conversations.noMessages': 'Sin mensajes aún',
+
+  // ── Knowledge base ─────────────────────────────────────────────────────────
+  'kb.title': 'Knowledge base',
+  'kb.upload': 'Subir documento',
+  'kb.empty': 'Todavía no hay documentos. Subí un PDF, Markdown o texto plano para empezar.',
+  'kb.errorBanner': 'Una o más fuentes están en error. Hacé click en "Ver" para más detalles.',
+  'kb.activeOn': 'Activa',
+  'kb.activeOff': 'Pausada',
+  'kb.view': 'Ver',
+  'kb.reindex': 'Re-indexar',
+  'kb.delete': 'Eliminar',
+  'kb.confirmDelete': '¿Eliminar esta fuente y todos sus chunks?',
+  'kb.upload.title': 'Subir documento',
+  'kb.upload.name': 'Nombre',
+  'kb.upload.type': 'Tipo',
+  'kb.upload.file': 'Archivo',
+  'kb.upload.submit': 'Subir',
+  'kb.upload.uploading': 'Subiendo…',
+  'kb.detail.chunks': 'Primeros chunks',
+  'kb.detail.close': 'Cerrar',
+  'common.cancel': 'Cancelar',
 } as const
 
 export default messages
