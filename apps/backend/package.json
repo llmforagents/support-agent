@@ -8,7 +8,7 @@
     "build": "tsup src/server.ts --format esm --target node20 --clean",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit",
+    "lint": "eslint src tests --max-warnings 0",
     "test": "vitest",
     "test:ci": "vitest run --exclude '**/*.integration.test.ts'",
     "test:integration": "vitest run --testNamePattern='integration|@integration' --include '**/*.integration.test.ts'"

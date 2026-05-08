@@ -21,6 +21,6 @@ export type Container = Readonly<{
   shutdown: () => Promise<void>
 }>
 
-export async function composeContainer(_env: Env): Promise<Container> {
-  throw new Error('composeContainer not yet implemented — wired in Task 35')
+export function composeContainer(_env: Env): Promise<Container> {
+  return Promise.reject(new Error('composeContainer not yet implemented — wired in Task 35'))
 }

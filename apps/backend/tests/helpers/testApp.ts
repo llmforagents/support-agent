@@ -5,7 +5,7 @@ import type { Container } from '../../src/composition/composeContainer'
 
 const silentLogger = pino({ level: 'silent' })
 
-export async function buildTestApp(): Promise<{ app: Hono; container: Container }> {
+export function buildTestApp(): { app: Hono; container: Container } {
   const env = {
     NODE_ENV: 'development',
     PORT: 3001,
