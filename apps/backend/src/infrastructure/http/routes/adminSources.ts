@@ -25,6 +25,7 @@ function buildIngestDeps(c: Container) {
     siteConfigStore: c.siteConfigStore,
     decrypt: c.decrypt,
     extractChunks,
+    logger: c.logger,
   }
 }
 

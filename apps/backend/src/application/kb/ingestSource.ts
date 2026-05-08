@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { Ok, Err, type Result, type AppError, ChunkId, type SourceId } from '@support/shared'
+import { Ok, Err, type Result, type AppError, type IngestError, ChunkId, type SourceId } from '@support/shared'
 import type { ChunkInsert, RawChunk, SourceConfig } from '../../domain/source'
 import type {
   KnowledgeStorePort, VectorStorePort, FileStorePort, EmbedderPort, BroadcastPort, SiteConfigStorePort,
 } from '../ports'
+import type { Logger } from '../../infrastructure/observability/logger'
 
 export type ExtractFn = (cfg: SourceConfig, fs: FileStorePort) => Promise<Result<readonly RawChunk[], AppError>>
 
@@ -16,9 +17,29 @@ export type IngestDeps = Readonly<{
   siteConfigStore: SiteConfigStorePort
   decrypt: (envelope: string) => string
   extractChunks: ExtractFn
+  logger?: Logger
 }>
 
 const BATCH_SIZE = 50
+
+// Narrows an AppError to an IngestError. Non-ingest kinds are wrapped so
+// SourceState.error stays well-typed when an upstream port surfaces a
+// transport-level error (e.g. db, rate-limit).
+function asIngestError(e: AppError): IngestError {
+  if (
+    e.kind === 'pdf_encrypted' ||
+    e.kind === 'pdf_parse_failed' ||
+    e.kind === 'embedding_provider_failed' ||
+    e.kind === 'chunk_too_large' ||
+    e.kind === 'unsupported_file_type' ||
+    e.kind === 'file_read_failed' ||
+    e.kind === 'source_not_found' ||
+    e.kind === 'source_invalid_state'
+  ) {
+    return e
+  }
+  return { kind: 'pdf_parse_failed', reason: `upstream error ${e.kind}: ${JSON.stringify(e)}` }
+}
 
 export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promise<Result<void, AppError>> {
   const sourceRes = await deps.knowledgeStore.getSource(sourceId)
@@ -54,7 +75,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
   if (!extractRes.ok) {
     await deps.knowledgeStore.updateSourceState(sourceId, {
       status: 'error',
-      error: extractRes.error as never,  // AppError narrowed to IngestError-shaped at runtime
+      error: asIngestError(extractRes.error),
       failedAt: new Date(),
       currentGeneration,
     })
@@ -81,7 +102,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
       const cause = JSON.stringify(embedRes.error)
       await deps.knowledgeStore.updateSourceState(sourceId, {
         status: 'error',
-        error: { kind: 'embedding_provider_failed', cause } as never,
+        error: { kind: 'embedding_provider_failed', cause },
         failedAt: new Date(),
         currentGeneration,
       })
@@ -107,7 +128,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
     if (!upsertRes.ok) {
       await deps.knowledgeStore.updateSourceState(sourceId, {
         status: 'error',
-        error: { kind: 'embedding_provider_failed', cause: `vector store: ${JSON.stringify(upsertRes.error)}` } as never,
+        error: { kind: 'embedding_provider_failed', cause: `vector store: ${JSON.stringify(upsertRes.error)}` },
         failedAt: new Date(),
         currentGeneration,
       })
@@ -132,7 +153,15 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
   })
   deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ready' })
 
-  // Cleanup stale chunks from previous generations (fire-and-forget)
-  void deps.vectorStore.deleteBySourceBelowGeneration(sourceId, nextGen)
+  // Cleanup stale chunks from previous generations (fire-and-forget; failure is
+  // non-fatal — orphaned chunks are invisible to search via the generation filter).
+  deps.vectorStore.deleteBySourceBelowGeneration(sourceId, nextGen).then(
+    (r) => {
+      if (!r.ok) deps.logger?.warn({ err: r.error, sourceId, nextGen }, 'stale chunk cleanup failed')
+    },
+    (err: unknown) => {
+      deps.logger?.warn({ err, sourceId, nextGen }, 'stale chunk cleanup threw')
+    },
+  )
   return Ok(undefined)
 }
