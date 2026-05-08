@@ -50,7 +50,7 @@ describe('MemoryKnowledgeStore', () => {
     // Small delay so updatedAt will differ
     await new Promise((r) => setTimeout(r, 5))
 
-    const newState = { status: 'ingesting' as const, currentGeneration: 0, pendingGeneration: 1 }
+    const newState = { status: 'ingesting' as const, currentGeneration: 0, pendingGeneration: 1, startedAt: new Date(), progress: { processed: 0, total: 0 } }
     const upd = await store.updateSourceState(created.value.id, newState)
     expect(upd.ok).toBe(true)
 
@@ -74,13 +74,14 @@ describe('MemoryKnowledgeStore', () => {
     if (!created.ok) throw new Error('createSource failed')
     const { id } = created.value
 
+    const now = new Date()
     const states = [
-      { status: 'ingesting' as const, currentGeneration: 0, pendingGeneration: 1 },
-      { status: 'ready' as const, currentGeneration: 1 },
-      { status: 'error' as const, currentGeneration: 1 },
+      { status: 'ingesting' as const, currentGeneration: 0, pendingGeneration: 1, startedAt: now, progress: { processed: 0, total: 0 } },
+      { status: 'ready' as const, currentGeneration: 1, ingestedAt: now, chunkCount: 3 },
+      { status: 'error' as const, currentGeneration: 1, error: { kind: 'file_read_failed', cause: 'test' }, failedAt: now },
       { status: 'paused' as const, currentGeneration: 1 },
       { status: 'idle' as const, currentGeneration: 1 },
-    ] as const
+    ]
 
     for (const state of states) {
       await store.updateSourceState(id, state)

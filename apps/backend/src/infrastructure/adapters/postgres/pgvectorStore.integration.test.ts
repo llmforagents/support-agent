@@ -51,7 +51,7 @@ describe('PgvectorStore @integration', () => {
     const created = await knowledgeStore.createSource({ name, sourceType: 'txt', config })
     if (!created.ok) throw new Error('createSource failed')
     const id = created.value.id
-    const readyState: SourceState = { status: 'ready', currentGeneration: gen }
+    const readyState: SourceState = { status: 'ready', currentGeneration: gen, ingestedAt: new Date(), chunkCount: 0 }
     await knowledgeStore.updateSourceState(id, readyState)
     return id
   }
@@ -119,7 +119,7 @@ describe('PgvectorStore @integration', () => {
 
     // Insert chunk with generation 1, but state is idle with gen=0
     // We manually set state to ingesting to have a chunk gen mismatch
-    const ingestingState: SourceState = { status: 'ingesting', currentGeneration: 0, pendingGeneration: 1 }
+    const ingestingState: SourceState = { status: 'ingesting', currentGeneration: 0, pendingGeneration: 1, startedAt: new Date(), progress: { processed: 0, total: 0 } }
     await knowledgeStore.updateSourceState(sourceId, ingestingState)
 
     const chunk = makeChunk(sourceId, 0, axisVector(0), 1)

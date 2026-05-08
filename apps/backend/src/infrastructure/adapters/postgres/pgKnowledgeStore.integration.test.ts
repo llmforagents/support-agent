@@ -76,7 +76,7 @@ describe('PgKnowledgeStore @integration', () => {
     const id = created.value.id
 
     // idle → ingesting
-    const ingesting = { status: 'ingesting' as const, currentGeneration: 0, pendingGeneration: 1 }
+    const ingesting = { status: 'ingesting' as const, currentGeneration: 0, pendingGeneration: 1, startedAt: new Date(), progress: { processed: 0, total: 0 } }
     const r1 = await store.updateSourceState(id, ingesting)
     expect(r1.ok).toBe(true)
 
@@ -86,7 +86,7 @@ describe('PgKnowledgeStore @integration', () => {
     expect(afterIngesting.value.state.status).toBe('ingesting')
 
     // ingesting → ready
-    const ready = { status: 'ready' as const, currentGeneration: 1 }
+    const ready = { status: 'ready' as const, currentGeneration: 1, ingestedAt: new Date(), chunkCount: 0 }
     const r2 = await store.updateSourceState(id, ready)
     expect(r2.ok).toBe(true)
 

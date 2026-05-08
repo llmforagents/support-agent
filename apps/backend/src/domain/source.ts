@@ -29,9 +29,25 @@ export type SourceConfig =
 
 export type SourceState =
   | { readonly status: 'idle';      readonly currentGeneration: number }
-  | { readonly status: 'ingesting'; readonly currentGeneration: number; readonly pendingGeneration: number }
-  | { readonly status: 'ready';     readonly currentGeneration: number }
-  | { readonly status: 'error';     readonly currentGeneration: number }
+  | {
+      readonly status: 'ingesting'
+      readonly currentGeneration: number
+      readonly pendingGeneration: number
+      readonly startedAt: Date
+      readonly progress: Readonly<{ processed: number; total: number }>
+    }
+  | {
+      readonly status: 'ready'
+      readonly currentGeneration: number
+      readonly ingestedAt: Date
+      readonly chunkCount: number
+    }
+  | {
+      readonly status: 'error'
+      readonly currentGeneration: number
+      readonly error: Readonly<Record<string, unknown>>
+      readonly failedAt: Date
+    }
   | { readonly status: 'paused';    readonly currentGeneration: number }
 
 // ---------------------------------------------------------------------------
