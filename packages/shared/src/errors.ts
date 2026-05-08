@@ -24,9 +24,20 @@ export type InfrastructureError =
   | { kind: 'infra_db_error'; cause: string }
   | { kind: 'infra_unexpected'; cause: string }
 
+export type IngestError =
+  | { kind: 'pdf_encrypted' }
+  | { kind: 'pdf_parse_failed'; reason: string }
+  | { kind: 'embedding_provider_failed'; cause: string }
+  | { kind: 'chunk_too_large'; chunkIndex: number; tokens: number }
+  | { kind: 'unsupported_file_type'; mime: string }
+  | { kind: 'file_read_failed'; cause: string }
+  | { kind: 'source_not_found' }
+  | { kind: 'source_invalid_state'; current: string; required: readonly string[] }
+
 export type AppError =
   | AuthError
   | ConversationError
   | ProviderError
   | RateLimitError
   | InfrastructureError
+  | IngestError

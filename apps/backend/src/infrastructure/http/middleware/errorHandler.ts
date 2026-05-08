@@ -26,6 +26,14 @@ function toHttpResponse(e: AppError): HttpResponse {
     case 'rate_limit_exceeded':       return { status: 429, body: { error: 'rate_limited', kind: e.kind, detail: { retryAfterSec: e.retryAfterSec } } }
     case 'infra_db_error':            return { status: 500, body: { error: 'database_error', kind: e.kind } }
     case 'infra_unexpected':          return { status: 500, body: { error: 'internal_error', kind: e.kind } }
+    case 'pdf_encrypted':             return { status: 422, body: { error: 'pdf_encrypted', kind: e.kind } }
+    case 'pdf_parse_failed':          return { status: 422, body: { error: 'pdf_parse_failed', kind: e.kind } }
+    case 'embedding_provider_failed': return { status: 502, body: { error: 'embedder_unavailable', kind: e.kind } }
+    case 'chunk_too_large':           return { status: 422, body: { error: 'chunk_too_large', kind: e.kind, detail: { chunkIndex: e.chunkIndex, tokens: e.tokens } } }
+    case 'unsupported_file_type':     return { status: 415, body: { error: 'unsupported_file_type', kind: e.kind, detail: { mime: e.mime } } }
+    case 'file_read_failed':          return { status: 500, body: { error: 'file_read_failed', kind: e.kind } }
+    case 'source_not_found':          return { status: 404, body: { error: 'source_not_found', kind: e.kind } }
+    case 'source_invalid_state':      return { status: 409, body: { error: 'source_invalid_state', kind: e.kind, detail: { current: e.current, required: e.required } } }
   }
 }
 
@@ -46,7 +54,7 @@ export function errorHandler(): MiddlewareHandler {
       if (r.status >= 500) log?.error({ requestId, kind: err.appError.kind, err }, 'app error 5xx')
       else log?.warn?.({ requestId, kind: err.appError.kind }, 'app error')
       // c.res must be set directly to override Hono's default error handler
-      c.res = c.json(r.body, r.status as 400 | 401 | 402 | 403 | 404 | 409 | 410 | 422 | 429 | 500 | 502)
+      c.res = c.json(r.body, r.status as 400 | 401 | 402 | 403 | 404 | 409 | 410 | 415 | 422 | 429 | 500 | 502)
       return
     }
 
