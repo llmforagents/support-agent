@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: support
+      POSTGRES_USER: support
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U support"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL must be set}
+      ADMIN_ORIGIN: ${ADMIN_ORIGIN:?ADMIN_ORIGIN must be set}
+      LLM4AGENTS_API_BASE: ${LLM4AGENTS_API_BASE:-https://api.llm4agents.com}
+      STORAGE_DRIVER: postgres
+      POSTGRES_URL: postgres://support:${POSTGRES_PASSWORD}@postgres:5432/support
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must be 64 hex chars}
+      STREAM_TOKEN_SECRET: ${STREAM_TOKEN_SECRET:?STREAM_TOKEN_SECRET must be 64 hex chars}
+      COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET must be set}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/readyz || exit 1"]
+      interval: 10s
+      retries: 6
+      start_period: 20s
+
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.admin
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata:
