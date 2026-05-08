@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { CreateSessionSchema, PostMessageSchema, VisitorId, SessionId, VISITOR_RATE_LIMIT_MSG_PER_MIN, VISITOR_RATE_LIMIT_MSG_PER_HOUR } from '@support/shared'
 import type { Container } from '../../../composition/composeContainer'
+import type { Session } from '../../../domain/conversation'
 import { handleVisitorMessage } from '../../../application/chat/handleVisitorMessage'
 import { signStreamToken } from '../../crypto/streamToken'
 import { AppHttpError } from '../middleware/errorHandler'
@@ -32,8 +33,13 @@ export function widgetSessionRoutes(c: Container): Hono {
     if (!visitorIdHeader) return ctx.json({ error: 'missing_visitor_id' }, 400)
     let visitorId
     try { visitorId = VisitorId(visitorIdHeader) } catch { return ctx.json({ error: 'bad_visitor_id' }, 400) }
-    const body = CreateSessionSchema.parse(await ctx.req.json().catch(() => ({})))
-    const r = await c.sessionStore.createSession({ visitorId, visitorMeta: body })
+    const parsed = CreateSessionSchema.parse(await ctx.req.json().catch(() => ({})))
+    const visitorMeta: Session['visitorMeta'] = {
+      ...(parsed.url !== undefined ? { url: parsed.url } : {}),
+      ...(parsed.userAgent !== undefined ? { userAgent: parsed.userAgent } : {}),
+      ...(parsed.language !== undefined ? { language: parsed.language } : {}),
+    }
+    const r = await c.sessionStore.createSession({ visitorId, visitorMeta })
     if (!r.ok) throw new AppHttpError(r.error)
     const streamToken = signStreamToken({ sessionId: r.value.id, visitorId }, c.env.STREAM_TOKEN_SECRET)
     return ctx.json({ sessionId: r.value.id, streamToken })
