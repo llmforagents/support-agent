@@ -9,7 +9,7 @@ export function usePostgres(): PgFixture {
   let container: StartedPostgreSqlContainer
   const fix: PgFixture = { pool: null as never, connectionString: '' }
   beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start()
+    container = await new PostgreSqlContainer('pgvector/pgvector:pg16').start()
     fix.connectionString = container.getConnectionUri()
     fix.pool = createPool(fix.connectionString)
     await runMigrations(fix.pool)

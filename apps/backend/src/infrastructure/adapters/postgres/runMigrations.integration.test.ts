@@ -14,5 +14,7 @@ describe('runMigrations @integration', () => {
     expect(names).toContain('sessions')
     expect(names).toContain('messages')
     expect(names).toContain('schema_migrations')
+    expect(names).toContain('sources')
+    expect(names).toContain('chunks')
   })
 })
