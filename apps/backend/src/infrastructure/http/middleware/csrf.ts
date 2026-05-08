@@ -21,6 +21,6 @@ export function csrf(opts: { secure: boolean }): MiddlewareHandler {
         return c.json({ error: 'csrf_mismatch', kind: 'auth_no_session' }, 403)
       }
     }
-    await next()
+    return next()
   }
 }

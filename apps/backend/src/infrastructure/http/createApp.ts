@@ -8,6 +8,7 @@ import { requestLogger } from './middleware/requestLogger'
 import { errorHandler } from './middleware/errorHandler'
 import { widgetCors, adminCors } from './middleware/cors'
 import { healthRoutes } from './routes/health'
+import { adminAuthRoutes } from './routes/adminAuth'
 
 export function createApp(c: Container): Hono {
   const app = new Hono()
@@ -31,6 +32,7 @@ export function createApp(c: Container): Hono {
   }))
   app.use('/v1/widget/*', widgetCors())
   app.use('/v1/admin/*', adminCors(c.env.ADMIN_ORIGIN))
+  app.route('/v1/admin/auth', adminAuthRoutes(c))
   app.route('/', healthRoutes(c))
   return app
 }
