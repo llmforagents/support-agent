@@ -15,6 +15,7 @@ function setup() {
   })
   ;(container as { llm: unknown }).llm = {
     async *chatStream() {
+      await Promise.resolve()
       yield { type: 'text', delta: 'hi back' }
       yield { type: 'done', usage: { promptTokens: 1, completionTokens: 2 }, costCents: 1 }
     },

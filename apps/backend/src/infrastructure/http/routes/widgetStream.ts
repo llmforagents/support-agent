@@ -47,7 +47,7 @@ export function widgetStreamRoutes(c: Container): Hono {
         void stream.writeSSE({ data: JSON.stringify({ type: 'ping' }) })
       }, SSE_HEARTBEAT_MS)
 
-      const lifetimeTimer = setTimeout(() => stream.close(), c.env.SSE_MAX_LIFETIME_MS)
+      const lifetimeTimer = setTimeout(() => { void stream.close() }, c.env.SSE_MAX_LIFETIME_MS)
 
       let cleaned = false
       const cleanup = (): void => {
