@@ -1,4 +1,4 @@
-import type { AdminId, MessageId, SessionId, UsdCents, VisitorId } from '@support/shared'
+import type { AdminId, ChunkId, MessageId, SessionId, SourceId, UsdCents, VisitorId } from '@support/shared'
 
 export type ConversationState =
   | { readonly status: 'active_ai' }
@@ -19,6 +19,12 @@ export type HandoffCategory =
 
 export type MessageRole = 'visitor' | 'assistant' | 'operator' | 'system_event'
 
+export type MessageRagHit = Readonly<{
+  id: ChunkId
+  sourceId: SourceId
+  score: number
+}>
+
 export type Message = Readonly<{
   id: MessageId
   sessionId: SessionId
@@ -26,6 +32,7 @@ export type Message = Readonly<{
   content: string
   costCents: UsdCents
   createdAt: Date
+  ragHits?: ReadonlyArray<MessageRagHit>
 }>
 
 export type Session = Readonly<{

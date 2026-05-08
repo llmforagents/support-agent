@@ -56,7 +56,15 @@ export function widgetSessionRoutes(c: Container): Hono {
     let body
     try { body = PostMessageSchema.parse(await ctx.req.json()) } catch { return ctx.json({ error: 'bad_request' }, 400) }
     const r = await handleVisitorMessage(
-      { sessionStore: c.sessionStore, siteConfigStore: c.siteConfigStore, broadcast: c.broadcast, llm: c.llm, decrypt: c.decrypt },
+      {
+        sessionStore: c.sessionStore,
+        siteConfigStore: c.siteConfigStore,
+        broadcast: c.broadcast,
+        llm: c.llm,
+        embedder: c.embedder,
+        vectorStore: c.vectorStore,
+        decrypt: c.decrypt,
+      },
       { sessionId, content: body.content },
     )
     if (!r.ok) throw new AppHttpError(r.error)

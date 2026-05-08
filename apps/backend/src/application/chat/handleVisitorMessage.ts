@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { Ok, Err, type Result, type AppError, UsdCents, MAX_HISTORY_TURNS, MessageId, type SessionId } from '@support/shared'
-import type { BroadcastPort, LlmPort, SessionStorePort, SiteConfigStorePort } from '../ports'
+import type { BroadcastPort, EmbedderPort, LlmPort, SessionStorePort, SiteConfigStorePort, VectorStorePort } from '../ports'
+import { searchKnowledge } from '../kb/searchKnowledge'
 
 export type ChatDeps = Readonly<{
   sessionStore: SessionStorePort
   siteConfigStore: SiteConfigStorePort
   broadcast: BroadcastPort
   llm: LlmPort
+  embedder: EmbedderPort
+  vectorStore: VectorStorePort
   decrypt: (envelope: string) => string
 }>
 
@@ -41,6 +44,18 @@ export async function handleVisitorMessage(
 
   const apiKey = deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
   const systemPrompt = cfg.value.systemPrompt.replace(/\{\{siteName\}\}/g, cfg.value.siteName)
+
+  const ragRes = await searchKnowledge(
+    { embedder: deps.embedder, vectorStore: deps.vectorStore, siteConfigStore: deps.siteConfigStore, decrypt: deps.decrypt },
+    input.content,
+    { topK: 5, minScore: 0.7 },
+  )
+  const ragHits = ragRes.ok ? ragRes.value : []
+  const ragContext = ragHits.length > 0
+    ? '\n\nRelevant context (use only if applicable):\n' + ragHits.map((h) => `[${h.sourceName}]\n${h.text}`).join('\n---\n')
+    : ''
+  const fullSystemPrompt = systemPrompt + ragContext
+
   const pendingAssistantId = MessageId(randomUUID())
   const ctrl = new AbortController()
   if (input.abort) input.abort.addEventListener('abort', () => ctrl.abort(), { once: true })
@@ -49,7 +64,7 @@ export async function handleVisitorMessage(
   let cost = UsdCents(0)
   try {
     for await (const ev of deps.llm.chatStream({
-      apiKey, model: cfg.value.agentModel, system: systemPrompt, messages: history, abort: ctrl.signal,
+      apiKey, model: cfg.value.agentModel, system: fullSystemPrompt, messages: history, abort: ctrl.signal,
     })) {
       switch (ev.type) {
         case 'text':
@@ -70,8 +85,11 @@ export async function handleVisitorMessage(
     return Err({ kind: 'llm_unavailable', cause: String(err) })
   }
 
+  const ragHitsForPersist = ragHits.map((h) => ({ id: h.id, sourceId: h.sourceId, score: h.score }))
   const assistantMsg = await deps.sessionStore.appendMessageWithId({
-    id: pendingAssistantId, sessionId: input.sessionId, role: 'assistant', content: buffer, costCents: cost,
+    id: pendingAssistantId, sessionId: input.sessionId, role: 'assistant',
+    content: buffer, costCents: cost,
+    ...(ragHitsForPersist.length > 0 ? { ragHits: ragHitsForPersist } : {}),
   })
   if (assistantMsg.ok) deps.broadcast.publish(input.sessionId, { type: 'message', message: assistantMsg.value })
   return Ok(undefined)

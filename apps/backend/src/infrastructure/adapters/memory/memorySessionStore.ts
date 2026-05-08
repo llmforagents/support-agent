@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { Ok, Err, type Result, type AppError, SessionId, MessageId, UsdCents } from '@support/shared'
-import type { ConversationState, Message, Session } from '../../../domain/conversation'
+import type { ConversationState, Message, MessageRagHit, Session } from '../../../domain/conversation'
 import type { SessionStorePort } from '../../../application/ports'
 
 export class MemorySessionStore implements SessionStorePort {
@@ -37,13 +37,14 @@ export class MemorySessionStore implements SessionStorePort {
     return this.appendMessageWithId({ id: MessageId(randomUUID()), ...input })
   }
 
-  appendMessageWithId(input: { id: MessageId; sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents }): Promise<Result<Message, AppError>> {
+  appendMessageWithId(input: { id: MessageId; sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents; ragHits?: ReadonlyArray<MessageRagHit> }): Promise<Result<Message, AppError>> {
     const list = this.messages.get(input.sessionId)
     const session = this.sessions.get(input.sessionId)
     if (!list || !session) return Promise.resolve(Err({ kind: 'session_not_found', sessionId: input.sessionId }))
     const m: Message = {
       id: input.id, sessionId: input.sessionId, role: input.role,
       content: input.content, costCents: input.costCents, createdAt: new Date(),
+      ...(input.ragHits !== undefined && input.ragHits.length > 0 ? { ragHits: input.ragHits } : {}),
     }
     list.push(m)
     this.sessions.set(input.sessionId, { ...session, totalCostCents: UsdCents(session.totalCostCents + input.costCents), lastActivityAt: new Date() })

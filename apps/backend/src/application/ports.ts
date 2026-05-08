@@ -2,7 +2,7 @@ import type {
   AdminId, MessageId, Result, SessionId, SourceId, UsdCents, VisitorId,
   AppError,
 } from '@support/shared'
-import type { ConversationState, Message, Session } from '../domain/conversation'
+import type { ConversationState, Message, MessageRagHit, Session } from '../domain/conversation'
 import type { ChunkHit, ChunkInsert, Source, SourceConfig, SourceState, SourceType } from '../domain/source'
 
 // ─── Auth & site ─────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ export interface SessionStorePort {
   getSession(id: SessionId): Promise<Result<Session, AppError>>
   updateState(id: SessionId, state: ConversationState): Promise<Result<void, AppError>>
   appendMessage(input: { sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents }): Promise<Result<Message, AppError>>
-  appendMessageWithId(input: { id: MessageId; sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents }): Promise<Result<Message, AppError>>
+  appendMessageWithId(input: { id: MessageId; sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents; ragHits?: ReadonlyArray<MessageRagHit> }): Promise<Result<Message, AppError>>
   listMessages(id: SessionId, opts: { limit: number; afterId?: MessageId }): Promise<Result<readonly Message[], AppError>>
   bumpActivity(id: SessionId): Promise<Result<void, AppError>>
   close(id: SessionId, by: 'admin' | 'visitor' | 'timeout'): Promise<Result<void, AppError>>
