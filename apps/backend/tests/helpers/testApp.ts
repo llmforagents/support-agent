@@ -6,6 +6,7 @@ import type { Container } from '../../src/composition/composeContainer'
 import { MemoryAdminStore } from '../../src/infrastructure/adapters/memory/memoryAdminStore'
 import { MemoryAdminSessionStore } from '../../src/infrastructure/adapters/memory/memoryAdminSessionStore'
 import { MemorySiteConfigStore } from '../../src/infrastructure/adapters/memory/memorySiteConfigStore'
+import { MemorySessionStore } from '../../src/infrastructure/adapters/memory/memorySessionStore'
 
 const silentLogger = pino({ level: 'silent' })
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -29,7 +30,7 @@ export function buildTestApp(): { app: Hono; container: Container } {
 
   const container: Container = {
     env, adminStore, adminSessionStore, siteConfigStore, broadcast,
-    sessionStore: null as never, llm: null as never, logger: silentLogger, sha256,
+    sessionStore: new MemorySessionStore(), llm: null as never, logger: silentLogger, sha256,
     encrypt: (s) => `enc::${s}`,
     decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s,
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
