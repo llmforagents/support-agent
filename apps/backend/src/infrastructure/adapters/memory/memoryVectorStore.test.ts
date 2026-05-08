@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { SourceId, ChunkId } from '@support/shared'
+import { ChunkId } from '@support/shared'
+import type { SourceId } from '@support/shared'
 import { MemoryKnowledgeStore } from './memoryKnowledgeStore'
 import { MemoryVectorStore } from './memoryVectorStore'
 import type { ChunkInsert } from '../../../domain/source'
@@ -15,7 +16,7 @@ const V_A = unitVec(1, 0, 0, 0)   // points along axis 0
 const V_B = unitVec(0, 1, 0, 0)   // points along axis 1
 const V_C = unitVec(1, 1, 0, 0)   // 45° between A and B → cosine(V_A,V_C)=~0.707
 
-function makeChunk(sourceId: ReturnType<typeof SourceId>, index: number, embedding: readonly number[], generation = 1): ChunkInsert {
+function makeChunk(sourceId: SourceId, index: number, embedding: readonly number[], generation = 1): ChunkInsert {
   return {
     id: ChunkId(randomUUID()),
     sourceId,
@@ -56,9 +57,9 @@ describe('MemoryVectorStore', () => {
     // First hit should be V_A (score ~1.0)
     expect(r.value[0]?.text).toBe('chunk text 0')
     // Scores should be descending
-    const scores = r.value.map((h) => h.score)
-    expect(scores[0]!).toBeGreaterThan(scores[1]!)
-    expect(scores[1]!).toBeGreaterThan(scores[2]!)
+    const [s0, s1, s2] = r.value.map((h) => h.score)
+    expect(s0).toBeGreaterThan(s1 ?? -Infinity)
+    expect(s1).toBeGreaterThan(s2 ?? -Infinity)
   })
 
   it('topK limits results', async () => {

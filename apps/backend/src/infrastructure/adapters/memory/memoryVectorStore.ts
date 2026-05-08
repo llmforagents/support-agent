@@ -1,4 +1,5 @@
-import { Ok, type Result, type AppError, SourceId } from '@support/shared'
+import { Ok, type Result, type AppError } from '@support/shared'
+import type { SourceId } from '@support/shared'
 import type { ChunkHit, ChunkInsert } from '../../../domain/source'
 import type { KnowledgeStorePort, SearchOpts, VectorStorePort } from '../../../application/ports'
 
@@ -28,7 +29,7 @@ export class MemoryVectorStore implements VectorStorePort {
     return Promise.resolve(Ok(undefined))
   }
 
-  deleteBySourceBelowGeneration(sourceId: ReturnType<typeof SourceId>, generation: number): Promise<Result<void, AppError>> {
+  deleteBySourceBelowGeneration(sourceId: SourceId, generation: number): Promise<Result<void, AppError>> {
     for (const [id, chunk] of this.chunks) {
       if (chunk.sourceId === sourceId && chunk.ingestGeneration < generation) {
         this.chunks.delete(id)

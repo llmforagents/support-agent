@@ -22,7 +22,7 @@ export class MemoryKnowledgeStore implements KnowledgeStorePort {
     return Promise.resolve(Ok(source))
   }
 
-  getSource(id: ReturnType<typeof SourceId>): Promise<Result<Source, AppError>> {
+  getSource(id: SourceId): Promise<Result<Source, AppError>> {
     const s = this.sources.get(id)
     if (!s) return Promise.resolve(Err({ kind: 'source_not_found' }))
     return Promise.resolve(Ok(s))
@@ -32,21 +32,21 @@ export class MemoryKnowledgeStore implements KnowledgeStorePort {
     return Promise.resolve(Ok([...this.sources.values()]))
   }
 
-  updateSourceState(id: ReturnType<typeof SourceId>, state: SourceState): Promise<Result<void, AppError>> {
+  updateSourceState(id: SourceId, state: SourceState): Promise<Result<void, AppError>> {
     const s = this.sources.get(id)
     if (!s) return Promise.resolve(Err({ kind: 'source_not_found' }))
     this.sources.set(id, { ...s, state, updatedAt: new Date() })
     return Promise.resolve(Ok(undefined))
   }
 
-  setActive(id: ReturnType<typeof SourceId>, active: boolean): Promise<Result<void, AppError>> {
+  setActive(id: SourceId, active: boolean): Promise<Result<void, AppError>> {
     const s = this.sources.get(id)
     if (!s) return Promise.resolve(Err({ kind: 'source_not_found' }))
     this.sources.set(id, { ...s, active, updatedAt: new Date() })
     return Promise.resolve(Ok(undefined))
   }
 
-  deleteSource(id: ReturnType<typeof SourceId>): Promise<Result<void, AppError>> {
+  deleteSource(id: SourceId): Promise<Result<void, AppError>> {
     this.sources.delete(id)
     return Promise.resolve(Ok(undefined))
   }
