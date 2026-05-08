@@ -6,9 +6,13 @@ import { PgAdminStore } from '../../src/infrastructure/adapters/postgres/pgAdmin
 import { PgAdminSessionStore } from '../../src/infrastructure/adapters/postgres/pgAdminSessionStore'
 import { PgSiteConfigStore } from '../../src/infrastructure/adapters/postgres/pgSiteConfigStore'
 import { PgSessionStore } from '../../src/infrastructure/adapters/postgres/pgSessionStore'
+import { PgKnowledgeStore } from '../../src/infrastructure/adapters/postgres/pgKnowledgeStore'
+import { PgvectorStore } from '../../src/infrastructure/adapters/postgres/pgvectorStore'
 import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
 import { encrypt, decrypt } from '../../src/infrastructure/crypto/encryption'
 import { hashPassword } from '../../src/infrastructure/crypto/passwordHash'
+import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
+import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
 import type { Container } from '../../src/composition/composeContainer'
 import pino from 'pino'
 import { SessionId } from '@support/shared'
@@ -46,6 +50,10 @@ describe('chat flow @integration', () => {
       sessionStore: new PgSessionStore(pg.pool),
       broadcast: new InProcessSseHub(),
       llm: stubLlm,
+      knowledgeStore: new PgKnowledgeStore(pg.pool),
+      vectorStore: new PgvectorStore(pg.pool),
+      fileStore: new MemoryFileStore(),
+      embedder: new MemoryEmbedder(1536),
       logger: pino({ level: 'silent' }),
       sha256,
       encrypt: (s) => encrypt(s, ENC),

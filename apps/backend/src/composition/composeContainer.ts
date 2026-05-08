@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type { Env } from '@support/shared'
 import type {
   AdminStorePort, AdminSessionStorePort, SiteConfigStorePort, SessionStorePort,
-  BroadcastPort, LlmPort,
+  BroadcastPort, LlmPort, KnowledgeStorePort, VectorStorePort, FileStorePort, EmbedderPort,
 } from '../application/ports'
 import { createPool, pingPool } from '../infrastructure/adapters/postgres/pool'
 import { runMigrations } from '../infrastructure/adapters/postgres/runMigrations'
@@ -10,6 +10,10 @@ import { PgAdminStore } from '../infrastructure/adapters/postgres/pgAdminStore'
 import { PgAdminSessionStore } from '../infrastructure/adapters/postgres/pgAdminSessionStore'
 import { PgSiteConfigStore } from '../infrastructure/adapters/postgres/pgSiteConfigStore'
 import { PgSessionStore } from '../infrastructure/adapters/postgres/pgSessionStore'
+import { PgKnowledgeStore } from '../infrastructure/adapters/postgres/pgKnowledgeStore'
+import { PgvectorStore } from '../infrastructure/adapters/postgres/pgvectorStore'
+import { LocalFileStore } from '../infrastructure/adapters/filesystem/localFileStore'
+import { Llm4AgentsEmbedderAdapter } from '../infrastructure/adapters/llm4agents/embedderAdapter'
 import { InProcessSseHub } from '../infrastructure/sse/inProcessSseHub'
 import { Llm4AgentsLlmAdapter } from '../infrastructure/adapters/llm4agents/llmAdapter'
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
@@ -23,6 +27,10 @@ export type Container = Readonly<{
   sessionStore: SessionStorePort
   broadcast: BroadcastPort
   llm: LlmPort
+  knowledgeStore: KnowledgeStorePort
+  vectorStore: VectorStorePort
+  fileStore: FileStorePort
+  embedder: EmbedderPort
   sha256: (s: string) => string
   encrypt: (plaintext: string) => string
   decrypt: (envelope: string) => string
@@ -58,6 +66,10 @@ export async function composeContainer(env: Env): Promise<Container> {
     sessionStore: new PgSessionStore(pool),
     broadcast: new InProcessSseHub(logger),
     llm: new Llm4AgentsLlmAdapter(undefined, env.LLM4AGENTS_API_BASE),
+    knowledgeStore: new PgKnowledgeStore(pool),
+    vectorStore: new PgvectorStore(pool),
+    fileStore: new LocalFileStore(env.FILE_STORE_PATH),
+    embedder: new Llm4AgentsEmbedderAdapter('openai/text-embedding-3-small', 1536, env.LLM4AGENTS_API_BASE),
     sha256,
     encrypt: (plaintext) => rawEncrypt(plaintext, env.ENCRYPTION_KEY),
     decrypt: (envelope) => rawDecrypt(envelope, env.ENCRYPTION_KEY),

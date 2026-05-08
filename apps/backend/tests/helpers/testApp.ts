@@ -7,6 +7,10 @@ import { MemoryAdminStore } from '../../src/infrastructure/adapters/memory/memor
 import { MemoryAdminSessionStore } from '../../src/infrastructure/adapters/memory/memoryAdminSessionStore'
 import { MemorySiteConfigStore } from '../../src/infrastructure/adapters/memory/memorySiteConfigStore'
 import { MemorySessionStore } from '../../src/infrastructure/adapters/memory/memorySessionStore'
+import { MemoryKnowledgeStore } from '../../src/infrastructure/adapters/memory/memoryKnowledgeStore'
+import { MemoryVectorStore } from '../../src/infrastructure/adapters/memory/memoryVectorStore'
+import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
+import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
 
 const silentLogger = pino({ level: 'silent' })
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -16,6 +20,10 @@ export function buildTestApp(): { app: Hono; container: Container } {
   const adminSessionStore = new MemoryAdminSessionStore()
   const siteConfigStore = new MemorySiteConfigStore()
   const broadcast = { publish: () => undefined, subscribe: () => () => undefined } as unknown as Container['broadcast']
+  const knowledgeStore = new MemoryKnowledgeStore()
+  const vectorStore = new MemoryVectorStore(knowledgeStore)
+  const fileStore = new MemoryFileStore()
+  const embedder = new MemoryEmbedder(1536)
 
   const env = {
     NODE_ENV: 'development', PORT: 3001,
@@ -31,6 +39,7 @@ export function buildTestApp(): { app: Hono; container: Container } {
   const container: Container = {
     env, adminStore, adminSessionStore, siteConfigStore, broadcast,
     sessionStore: new MemorySessionStore(), llm: null as never, logger: silentLogger, sha256,
+    knowledgeStore, vectorStore, fileStore, embedder,
     encrypt: (s) => `enc::${s}`,
     decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s,
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
