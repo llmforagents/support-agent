@@ -1,0 +1,58 @@
+import type { MiddlewareHandler } from 'hono'
+import type { AppError } from '@support/shared'
+
+export class AppHttpError extends Error {
+  constructor(public readonly appError: AppError) {
+    super(appError.kind)
+  }
+}
+
+type HttpResponse = { status: number; body: { error: string; kind: string; detail?: unknown } }
+
+function toHttpResponse(e: AppError): HttpResponse {
+  switch (e.kind) {
+    case 'auth_invalid_credentials':  return { status: 401, body: { error: 'invalid_credentials', kind: e.kind } }
+    case 'auth_session_expired':      return { status: 401, body: { error: 'session_expired', kind: e.kind } }
+    case 'auth_no_session':           return { status: 401, body: { error: 'no_session', kind: e.kind } }
+    case 'auth_already_onboarded':    return { status: 409, body: { error: 'already_onboarded', kind: e.kind } }
+    case 'auth_rate_limited':         return { status: 429, body: { error: 'rate_limited', kind: e.kind, detail: { retryAfterSec: e.retryAfterSec } } }
+    case 'session_not_found':         return { status: 404, body: { error: 'session_not_found', kind: e.kind } }
+    case 'session_closed':            return { status: 410, body: { error: 'session_closed', kind: e.kind } }
+    case 'invalid_state_transition':  return { status: 409, body: { error: 'invalid_state_transition', kind: e.kind, detail: { from: e.from, to: e.to } } }
+    case 'session_already_claimed':   return { status: 409, body: { error: 'already_claimed', kind: e.kind, detail: { operatorId: e.operatorId } } }
+    case 'llm_insufficient_balance':  return { status: 402, body: { error: 'insufficient_balance', kind: e.kind } }
+    case 'llm_unavailable':           return { status: 502, body: { error: 'llm_unavailable', kind: e.kind } }
+    case 'llm_invalid_response':      return { status: 502, body: { error: 'llm_invalid_response', kind: e.kind } }
+    case 'rate_limit_exceeded':       return { status: 429, body: { error: 'rate_limited', kind: e.kind, detail: { retryAfterSec: e.retryAfterSec } } }
+    case 'infra_db_error':            return { status: 500, body: { error: 'database_error', kind: e.kind } }
+    case 'infra_unexpected':          return { status: 500, body: { error: 'internal_error', kind: e.kind } }
+  }
+}
+
+interface PinoLike { error(...args: unknown[]): void; warn(...args: unknown[]): void }
+
+export function errorHandler(): MiddlewareHandler {
+  return async (c, next) => {
+    await next()
+
+    const err = c.error
+    if (!err) return
+
+    const log = c.get('logger') as PinoLike | undefined
+    const requestId = c.get('requestId') as string | undefined
+
+    if (err instanceof AppHttpError) {
+      const r = toHttpResponse(err.appError)
+      if (r.status >= 500) log?.error({ requestId, kind: err.appError.kind, err }, 'app error 5xx')
+      else log?.warn?.({ requestId, kind: err.appError.kind }, 'app error')
+      // c.res must be set directly to override Hono's default error handler
+      c.res = c.json(r.body, r.status as 400 | 401 | 402 | 403 | 404 | 409 | 410 | 422 | 429 | 500 | 502)
+      return
+    }
+
+    log?.error({ requestId, err }, 'unhandled error')
+    // No logger? Fall back to console for boot-time errors before middleware is wired.
+    if (!log) console.error('[unhandled error]', err)
+    c.res = c.json({ error: 'internal_error', kind: 'infra_unexpected' }, 500)
+  }
+}
