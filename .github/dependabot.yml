@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  # npm / pnpm workspaces
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      production-deps:
+        dependency-type: production
+      dev-tools:
+        dependency-type: development
+    ignore:
+      # Major bumps reviewed manually
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Docker base images
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+      day: monday
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
