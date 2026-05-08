@@ -13,7 +13,7 @@ export function createPool(connectionString: string): PgPool {
 
 export async function pingPool(pool: PgPool): Promise<boolean> {
   try {
-    const r = await pool.query('SELECT 1 AS ok')
+    const r = await pool.query<{ ok: number }>('SELECT 1 AS ok')
     return r.rows[0]?.['ok'] === 1
   } catch {
     return false
