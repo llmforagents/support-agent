@@ -178,6 +178,19 @@ function App(): JSX.Element {
     })
   }
 
+  // ── ESC key closes the widget ─────────────────────────────────────────────
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if (e.key === 'Escape') {
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, []) // handleClose is stable (no deps)
+
   // ── Close (postMessage to bootstrap) ─────────────────────────────────────
   function handleClose(): void {
     window.parent.postMessage('llm4agents:close', '*')
@@ -223,14 +236,21 @@ function App(): JSX.Element {
   }
 
   return (
-    <ChatPanel
-      config={config}
-      messages={messages}
-      streamingToken={streamingToken}
-      sending={sending}
-      onSend={handleSend}
-      onClose={handleClose}
-    />
+    <div
+      role="dialog"
+      aria-label={`${config.siteName} support chat`}
+      aria-modal="false"
+      style={{ height: '100%' }}
+    >
+      <ChatPanel
+        config={config}
+        messages={messages}
+        streamingToken={streamingToken}
+        sending={sending}
+        onSend={handleSend}
+        onClose={handleClose}
+      />
+    </div>
   )
 }
 

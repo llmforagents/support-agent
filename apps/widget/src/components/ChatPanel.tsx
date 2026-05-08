@@ -54,6 +54,9 @@ export function ChatPanel({
 
       {/* Message list */}
       <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
         style={{
           flex: 1,
           overflowY: 'auto',

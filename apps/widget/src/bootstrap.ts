@@ -63,6 +63,14 @@ function mount(siteKey: string, baseUrl: string): void {
     iframe.style.display = open ? 'block' : 'none'
     btn.setAttribute('aria-expanded', String(open))
     setButtonIcon(btn, open ? 'close' : 'chat')
+
+    if (open) {
+      // Move focus into the iframe so keyboard users land inside the dialog
+      iframe.focus()
+    } else {
+      // Return focus to the FAB when the chat is closed
+      btn.focus()
+    }
   })
 
   // Allow the embed app to close the widget via postMessage
@@ -72,6 +80,8 @@ function mount(siteKey: string, baseUrl: string): void {
       iframe.style.display = 'none'
       btn.setAttribute('aria-expanded', 'false')
       setButtonIcon(btn, 'chat')
+      // Return focus to the FAB
+      btn.focus()
     }
   })
 }
