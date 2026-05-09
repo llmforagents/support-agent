@@ -13,6 +13,7 @@ import { adminAuthRoutes } from './routes/adminAuth'
 import { adminOnboardingRoutes } from './routes/adminOnboarding'
 import { adminConfigRoutes } from './routes/adminConfig'
 import { adminSourcesRoutes } from './routes/adminSources'
+import { adminMysqlRoutes } from './routes/adminMysql'
 import { adminStreamRoutes } from './routes/adminStream'
 import { widgetConfigRoutes } from './routes/widgetConfig'
 import { widgetSessionRoutes } from './routes/widgetSessions'
@@ -45,9 +46,11 @@ export function createApp(c: Container): Hono {
   app.use('/v1/admin/onboarding/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/config/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/sources/*', csrf({ secure: c.env.COOKIE_SECURE }))
+  app.use('/v1/admin/mysql-connections/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.route('/v1/admin/onboarding', adminOnboardingRoutes(c))
   app.route('/v1/admin/config', adminConfigRoutes(c))
   app.route('/v1/admin/sources', adminSourcesRoutes(c))
+  app.route('/v1/admin/mysql-connections', adminMysqlRoutes(c))
   app.route('/v1/admin/stream', adminStreamRoutes(c))
   app.route('/', widgetAssetRoutes(c))
   app.route('/v1/widget/config', widgetConfigRoutes(c))

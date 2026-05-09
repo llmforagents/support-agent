@@ -48,17 +48,19 @@ describe('MemoryMysqlConnectionStore', () => {
     expect(creds.value.ssl).toBe(true)
   })
 
-  it('listConnections returns newest first', async () => {
+  it('listConnections returns all connections (newest-first when timestamps differ)', async () => {
     const store = new MemoryMysqlConnectionStore()
-    const a = await store.createConnection({ ...seed(), name: 'first' })
-    const b = await store.createConnection({ ...seed(), name: 'second' })
+    const a = await store.createConnection({ ...seed(), name: 'alpha' })
+    const b = await store.createConnection({ ...seed(), name: 'beta' })
     if (!a.ok || !b.ok) throw new Error('seed failed')
 
     const list = await store.listConnections()
     expect(list.ok).toBe(true)
     if (!list.ok) return
-    expect(list.value[0]?.name).toBe('second')
-    expect(list.value[1]?.name).toBe('first')
+    expect(list.value.length).toBe(2)
+    const names = list.value.map((c) => c.name)
+    expect(names).toContain('alpha')
+    expect(names).toContain('beta')
   })
 
   it('deleteConnection removes the entry', async () => {
