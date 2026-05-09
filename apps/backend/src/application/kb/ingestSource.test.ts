@@ -6,6 +6,7 @@ import { MemoryFileStore } from '../../infrastructure/adapters/memory/memoryFile
 import { MemoryEmbedder } from '../../infrastructure/adapters/memory/memoryEmbedder'
 import { MemorySiteConfigStore } from '../../infrastructure/adapters/memory/memorySiteConfigStore'
 import { InProcessSseHub } from '../../infrastructure/sse/inProcessSseHub'
+import { MemoryMysqlConnectionStore } from '../../infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import { Ok, type Result, type AppError } from '@support/shared'
 import type { RawChunk } from '../../domain/source'
 
@@ -24,7 +25,8 @@ async function setup() {
     handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: false },
     adminOnline: false, onboardingStep: 9, onboardingCompleted: true,
   })
-  return { knowledgeStore, vectorStore, fileStore, embedder, siteConfigStore, broadcast }
+  const mysqlConnectionStore = new MemoryMysqlConnectionStore()
+  return { knowledgeStore, vectorStore, fileStore, embedder, siteConfigStore, broadcast, mysqlConnectionStore }
 }
 
 describe('ingestSource', () => {

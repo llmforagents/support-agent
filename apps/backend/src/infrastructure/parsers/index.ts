@@ -1,19 +1,29 @@
 import { Err, type Result, type IngestError } from '@support/shared'
 import type { SourceConfig, RawChunk } from '../../domain/source'
-import type { FileStorePort } from '../../application/ports'
+import type { FileStorePort, MysqlConnectionStorePort } from '../../application/ports'
 import { parsePdf } from './pdfParser'
 import { parseMd } from './mdParser'
 import { parseTxt } from './txtParser'
+import { parseMysql } from './mysqlParser'
+
+export type ExtractDeps = Readonly<{
+  fileStore: FileStorePort
+  mysqlConnectionStore: MysqlConnectionStorePort
+}>
 
 export async function extractChunks(
   cfg: SourceConfig,
-  fileStore: FileStorePort,
+  deps: ExtractDeps,
 ): Promise<Result<readonly RawChunk[], IngestError>> {
   if (cfg.sourceType === 'mysql_query') {
-    return Err({ kind: 'pdf_parse_failed', reason: 'mysql_query not implemented in P2' })
+    const credsRes = await deps.mysqlConnectionStore.getCredentials(cfg.connectionRef)
+    if (!credsRes.ok) {
+      return Err({ kind: 'mysql_connection_refused', host: '?' })
+    }
+    return parseMysql(credsRes.value, { query: cfg.query, rowTemplate: cfg.rowTemplate })
   }
 
-  const file = await fileStore.get(cfg.fileRef)
+  const file = await deps.fileStore.get(cfg.fileRef)
   if (!file.ok) {
     return Err({ kind: 'file_read_failed', cause: JSON.stringify(file.error) })
   }

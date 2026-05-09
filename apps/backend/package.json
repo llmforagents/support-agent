@@ -22,6 +22,7 @@
     "gpt-tokenizer": "^2.5.0",
     "hono": "^4.6.0",
     "mdast-util-to-string": "^4.0.0",
+    "mysql2": "^3.11.4",
     "node-sql-parser": "^5.3.13",
     "pdf-parse": "^1.1.1",
     "pg": "^8.13.0",

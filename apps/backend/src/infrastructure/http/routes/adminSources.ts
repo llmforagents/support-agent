@@ -23,6 +23,7 @@ function buildIngestDeps(c: Container) {
     embedder: c.embedder,
     broadcast: c.broadcast,
     siteConfigStore: c.siteConfigStore,
+    mysqlConnectionStore: c.mysqlConnectionStore,
     decrypt: c.decrypt,
     extractChunks,
     logger: c.logger,

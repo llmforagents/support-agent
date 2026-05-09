@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { extractChunks } from './index'
 import { MemoryFileStore } from '../adapters/memory/memoryFileStore'
+import { MemoryMysqlConnectionStore } from '../adapters/memory/memoryMysqlConnectionStore'
 
 const FIXTURE_PDF = join(__dirname, '../../../tests/fixtures/sample.pdf')
 
@@ -14,11 +15,12 @@ async function storeAndGetRef(store: MemoryFileStore, data: Uint8Array, contentT
 
 describe('extractChunks', () => {
   it('pdf type: calls parsePdf and returns chunks', async () => {
-    const store = new MemoryFileStore()
+    const fileStore = new MemoryFileStore()
+    const mysqlConnectionStore = new MemoryMysqlConnectionStore()
     const pdfBytes = new Uint8Array(readFileSync(FIXTURE_PDF))
-    const ref = await storeAndGetRef(store, pdfBytes, 'application/pdf')
+    const ref = await storeAndGetRef(fileStore, pdfBytes, 'application/pdf')
 
-    const result = await extractChunks({ sourceType: 'pdf', fileRef: ref }, store)
+    const result = await extractChunks({ sourceType: 'pdf', fileRef: ref }, { fileStore, mysqlConnectionStore })
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.length).toBeGreaterThanOrEqual(1)
@@ -29,12 +31,13 @@ describe('extractChunks', () => {
   })
 
   it('md type: calls parseMd and returns chunks with headings metadata', async () => {
-    const store = new MemoryFileStore()
+    const fileStore = new MemoryFileStore()
+    const mysqlConnectionStore = new MemoryMysqlConnectionStore()
     const mdContent = '# Introduction\nThis is the intro section.\n## Details\nMore details here.'
     const mdBytes = new TextEncoder().encode(mdContent)
-    const ref = await storeAndGetRef(store, mdBytes, 'text/markdown')
+    const ref = await storeAndGetRef(fileStore, mdBytes, 'text/markdown')
 
-    const result = await extractChunks({ sourceType: 'md', fileRef: ref }, store)
+    const result = await extractChunks({ sourceType: 'md', fileRef: ref }, { fileStore, mysqlConnectionStore })
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.length).toBeGreaterThanOrEqual(1)
@@ -45,41 +48,43 @@ describe('extractChunks', () => {
   })
 
   it('txt type: calls parseTxt and returns text chunks', async () => {
-    const store = new MemoryFileStore()
+    const fileStore = new MemoryFileStore()
+    const mysqlConnectionStore = new MemoryMysqlConnectionStore()
     const txtContent = 'Plain text content for extraction testing purposes.'
     const txtBytes = new TextEncoder().encode(txtContent)
-    const ref = await storeAndGetRef(store, txtBytes, 'text/plain')
+    const ref = await storeAndGetRef(fileStore, txtBytes, 'text/plain')
 
-    const result = await extractChunks({ sourceType: 'txt', fileRef: ref }, store)
+    const result = await extractChunks({ sourceType: 'txt', fileRef: ref }, { fileStore, mysqlConnectionStore })
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.length).toBeGreaterThanOrEqual(1)
     expect(result.value[0]?.text).toBe(txtContent)
   })
 
-  it('mysql_query type: returns Err without touching fileStore', async () => {
-    const store = new MemoryFileStore()
-    // No files stored in store — mysql_query should return error immediately
+  it('mysql_query type with no stored connection returns mysql_connection_refused', async () => {
+    const fileStore = new MemoryFileStore()
+    const mysqlConnectionStore = new MemoryMysqlConnectionStore()
+    // No connection seeded — getCredentials will return error
     const result = await extractChunks(
       {
         sourceType: 'mysql_query',
-        connectionRef: 'conn-1',
+        connectionRef: 'nonexistent-conn-id',
         query: 'SELECT * FROM docs',
         rowTemplate: '{{content}}',
         refreshCronSpec: '0 * * * *',
       },
-      store,
+      { fileStore, mysqlConnectionStore },
     )
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error.kind).toBe('pdf_parse_failed')
-      expect((result.error as { reason: string }).reason).toContain('mysql_query not implemented')
+      expect(result.error.kind).toBe('mysql_connection_refused')
     }
   })
 
   it('missing file ref returns file_read_failed', async () => {
-    const store = new MemoryFileStore()
-    const result = await extractChunks({ sourceType: 'txt', fileRef: 'nonexistent-ref' }, store)
+    const fileStore = new MemoryFileStore()
+    const mysqlConnectionStore = new MemoryMysqlConnectionStore()
+    const result = await extractChunks({ sourceType: 'txt', fileRef: 'nonexistent-ref' }, { fileStore, mysqlConnectionStore })
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error.kind).toBe('file_read_failed')

@@ -3,10 +3,12 @@ import { Ok, Err, type Result, type AppError, type IngestError, ChunkId, type So
 import type { ChunkInsert, RawChunk, SourceConfig } from '../../domain/source'
 import type {
   KnowledgeStorePort, VectorStorePort, FileStorePort, EmbedderPort, BroadcastPort, SiteConfigStorePort,
+  MysqlConnectionStorePort,
 } from '../ports'
+import type { ExtractDeps } from '../../infrastructure/parsers'
 import type { Logger } from '../../infrastructure/observability/logger'
 
-export type ExtractFn = (cfg: SourceConfig, fs: FileStorePort) => Promise<Result<readonly RawChunk[], AppError>>
+export type ExtractFn = (cfg: SourceConfig, deps: ExtractDeps) => Promise<Result<readonly RawChunk[], AppError>>
 
 export type IngestDeps = Readonly<{
   knowledgeStore: KnowledgeStorePort
@@ -15,6 +17,7 @@ export type IngestDeps = Readonly<{
   embedder: EmbedderPort
   broadcast: BroadcastPort
   siteConfigStore: SiteConfigStorePort
+  mysqlConnectionStore: MysqlConnectionStorePort
   decrypt: (envelope: string) => string
   extractChunks: ExtractFn
   logger?: Logger
@@ -74,7 +77,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
   })
   deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ingesting' })
 
-  const extractRes = await deps.extractChunks(src.config, deps.fileStore)
+  const extractRes = await deps.extractChunks(src.config, { fileStore: deps.fileStore, mysqlConnectionStore: deps.mysqlConnectionStore })
   if (!extractRes.ok) {
     await deps.knowledgeStore.updateSourceState(sourceId, {
       status: 'error',
