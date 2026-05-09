@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { Ok, Err, type Result, type AppError, UsdCents, MAX_HISTORY_TURNS, MessageId, type SessionId } from '@support/shared'
 import type { BroadcastPort, EmbedderPort, LlmPort, SessionStorePort, SiteConfigStorePort, VectorStorePort } from '../ports'
 import { searchKnowledge } from '../kb/searchKnowledge'
-import { HANDOFF_TOOL, HANDOFF_TOOL_GUIDANCE } from './handoffPrompt'
+import { HANDOFF_TOOL, HANDOFF_TOOL_GUIDANCE, FALLBACK_NO_ADMIN_PROMPT } from './handoffPrompt'
 import { requestHandoff } from './conversationTransitions'
 import type { HandoffReason, HandoffCategory } from '../../domain/conversation'
 
@@ -63,8 +63,10 @@ export async function handleVisitorMessage(
     : ''
 
   const handoffEnabled = cfg.value.handoffPolicy.toolEnabled && cfg.value.adminOnline
+  const handoffOfflineFallback = cfg.value.handoffPolicy.toolEnabled && !cfg.value.adminOnline
   const fullSystemPrompt = systemPrompt + ragContext
     + (handoffEnabled ? '\n\n' + HANDOFF_TOOL_GUIDANCE : '')
+    + (handoffOfflineFallback ? '\n\n' + FALLBACK_NO_ADMIN_PROMPT : '')
   const tools = handoffEnabled ? [HANDOFF_TOOL] : undefined
 
   const pendingAssistantId = MessageId(randomUUID())

@@ -175,6 +175,7 @@ describe('handleVisitorMessage', () => {
     let capturedTools: unknown = 'not-set'
     const stubLlm: LlmPort = {
       async *chatStream(req) {
+        await Promise.resolve()
         capturedTools = req.tools
         yield { type: 'text', delta: 'hi' }
         yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
@@ -198,6 +199,7 @@ describe('handleVisitorMessage', () => {
     let capturedTools: unknown = 'not-set'
     const stubLlm: LlmPort = {
       async *chatStream(req) {
+        await Promise.resolve()
         capturedTools = req.tools
         yield { type: 'text', delta: 'hi' }
         yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
@@ -226,6 +228,7 @@ describe('handleVisitorMessage', () => {
 
     const stubLlm: LlmPort = {
       async *chatStream() {
+        await Promise.resolve()
         yield { type: 'text', delta: 'Let me get' }
         yield { type: 'tool_start', name: 'request_human_handoff', argsJson: '{"reason":"user asked for a human","category":"user_request"}' }
         yield { type: 'done', usage: { promptTokens: 10, completionTokens: 5 }, costCents: UsdCents(1) }
@@ -266,6 +269,36 @@ describe('handleVisitorMessage', () => {
     expect(assistantMsg).toBeUndefined()
   })
 
+  it('handoff: toolEnabled=true adminOnline=false → fallback guidance in system prompt, no tools array', async () => {
+    const env = await setup()
+    await env.siteConfigStore.upsertOnboarding({
+      siteKey: 'X', siteName: 'Acme', primaryColor: '#000',
+      llm4agentsApiKeyEncrypted: 'enc::sk-proxy-xxxxxxxxxx',
+      agentModel: 'm', embeddingModel: 'e', embeddingDim: DIM,
+      systemPrompt: 'help', mcpEnabled: false,
+      handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: true },
+      adminOnline: false, onboardingStep: 9, onboardingCompleted: true,
+    })
+
+    let capturedSystem = ''
+    let capturedTools: unknown = 'not-set'
+    const stubLlm: LlmPort = {
+      async *chatStream(req) {
+        await Promise.resolve()
+        capturedSystem = req.system
+        capturedTools = req.tools
+        yield { type: 'text', delta: 'Lo siento' }
+        yield { type: 'done', usage: { promptTokens: 2, completionTokens: 2 }, costCents: UsdCents(0) }
+      },
+    }
+
+    const r = await handleVisitorMessage({ ...makeDeps(env), llm: stubLlm }, { sessionId: env.sessionId, content: 'quiero hablar con un humano' })
+    expect(r.ok).toBe(true)
+    expect(capturedTools).toBeUndefined()
+    expect(capturedSystem).toContain('no hay agentes')
+    expect(capturedSystem).not.toContain('request_human_handoff')
+  })
+
   it('handoff: malformed tool args → falls back to out_of_scope category gracefully', async () => {
     const env = await setup()
     await env.siteConfigStore.upsertOnboarding({
@@ -282,6 +315,7 @@ describe('handleVisitorMessage', () => {
 
     const stubLlm: LlmPort = {
       async *chatStream() {
+        await Promise.resolve()
         yield { type: 'tool_start', name: 'request_human_handoff', argsJson: 'INVALID JSON }{' }
         yield { type: 'done', usage: { promptTokens: 5, completionTokens: 2 }, costCents: UsdCents(0) }
       },

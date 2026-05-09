@@ -41,3 +41,14 @@ es un tema sensible, o no podés ayudar tras 2 intentos), llamá a la herramient
 al usuario que vas a escalar — el sistema lo maneja automáticamente y notifica al
 admin.
 `.trim()
+
+/**
+ * Injected when toolEnabled=true but adminOnline=false.
+ * Instructs the AI to acknowledge the user's request for a human gracefully
+ * and offer an async alternative instead of making a promise it cannot keep.
+ */
+export const FALLBACK_NO_ADMIN_PROMPT = `
+Si el visitante pide hablar con un humano: en este momento no hay agentes
+disponibles. Decile educadamente que podés intentar ayudarlo vos mismo, o
+que deje su email para que un humano lo contacte después.
+`.trim()
