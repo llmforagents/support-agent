@@ -6,11 +6,20 @@ import { Button } from '@/presentation/components/ui/button'
 import { Card } from '@/presentation/components/ui/card'
 import { UploadModal } from '@/presentation/components/kb/UploadModal'
 import { SourceDetail } from '@/presentation/components/kb/SourceDetail'
+import { MysqlConnectionModal } from '@/presentation/components/kb/MysqlConnectionModal'
+import { MysqlQueryBuilder } from '@/presentation/components/kb/MysqlQueryBuilder'
 import { t } from '@/lib/i18n'
+
+type PendingConnection = {
+  readonly id: string
+  readonly name: string
+}
 
 export function KnowledgeBase(): React.JSX.Element {
   const qc = useQueryClient()
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [mysqlModalOpen, setMysqlModalOpen] = useState(false)
+  const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const sourcesQ = useQuery({
@@ -43,7 +52,12 @@ export function KnowledgeBase(): React.JSX.Element {
         <div className="mx-auto max-w-4xl space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold">{t('kb.title')}</h1>
-            <Button onClick={() => { setUploadOpen(true) }}>{t('kb.upload')}</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setMysqlModalOpen(true) }}>
+                Conectar MySQL
+              </Button>
+              <Button onClick={() => { setUploadOpen(true) }}>{t('kb.upload')}</Button>
+            </div>
           </div>
           {hasError && (
             <div className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
@@ -108,6 +122,22 @@ export function KnowledgeBase(): React.JSX.Element {
       </main>
       {uploadOpen && (
         <UploadModal onClose={() => { setUploadOpen(false) }} />
+      )}
+      {mysqlModalOpen && (
+        <MysqlConnectionModal
+          onClose={() => { setMysqlModalOpen(false) }}
+          onCreated={(conn) => {
+            setMysqlModalOpen(false)
+            setPendingConnection(conn)
+          }}
+        />
+      )}
+      {pendingConnection !== null && (
+        <MysqlQueryBuilder
+          connectionId={pendingConnection.id}
+          connectionName={pendingConnection.name}
+          onClose={() => { setPendingConnection(null) }}
+        />
       )}
       {selectedId !== null && (
         <SourceDetail sourceId={selectedId} onClose={() => { setSelectedId(null) }} />

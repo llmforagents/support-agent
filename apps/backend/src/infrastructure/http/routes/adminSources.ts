@@ -56,8 +56,41 @@ export function adminSourcesRoutes(c: Container): Hono {
     return ctx.json(r.value)
   })
 
-  // POST /v1/admin/sources  (multipart)
+  // POST /v1/admin/sources  (JSON for mysql_query, multipart for file types)
   app.post('/', async (ctx) => {
+    const ct = ctx.req.header('content-type') ?? ''
+
+    if (ct.includes('application/json')) {
+      // mysql_query branch
+      const MysqlSourceSchema = z.object({
+        name: z.string().min(1).max(100),
+        sourceType: z.literal('mysql_query'),
+        connectionId: z.string().min(1),
+        query: z.string().min(1),
+        rowTemplate: z.string().min(1),
+        refreshCronSpec: z.string().optional(),
+      })
+      const body = MysqlSourceSchema.parse(await ctx.req.json())
+      const config: SourceConfig = {
+        sourceType: 'mysql_query',
+        connectionRef: body.connectionId,
+        query: body.query,
+        rowTemplate: body.rowTemplate,
+        refreshCronSpec: body.refreshCronSpec ?? '@daily',
+      }
+      const sourceRes = await c.knowledgeStore.createSource({
+        name: body.name,
+        sourceType: 'mysql_query',
+        config,
+      })
+      if (!sourceRes.ok) throw new AppHttpError(sourceRes.error)
+      void ingestSource(buildIngestDeps(c), sourceRes.value.id).catch((err: unknown) => {
+        c.logger.error({ err, sourceId: sourceRes.value.id }, 'mysql ingest crashed')
+      })
+      return ctx.json(sourceRes.value, 201)
+    }
+
+    // multipart branch (file types)
     const body = await ctx.req.parseBody()
     const file = body['file']
     const name = body['name']
