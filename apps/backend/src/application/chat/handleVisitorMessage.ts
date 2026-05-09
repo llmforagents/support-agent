@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto'
 import { Ok, Err, type Result, type AppError, UsdCents, MAX_HISTORY_TURNS, MessageId, type SessionId } from '@support/shared'
 import type { BroadcastPort, EmbedderPort, LlmPort, SessionStorePort, SiteConfigStorePort, VectorStorePort } from '../ports'
 import { searchKnowledge } from '../kb/searchKnowledge'
+import { HANDOFF_TOOL, HANDOFF_TOOL_GUIDANCE } from './handoffPrompt'
+import { requestHandoff } from './conversationTransitions'
+import type { HandoffReason, HandoffCategory } from '../../domain/conversation'
 
 export type ChatDeps = Readonly<{
   sessionStore: SessionStorePort
@@ -12,6 +15,10 @@ export type ChatDeps = Readonly<{
   vectorStore: VectorStorePort
   decrypt: (envelope: string) => string
 }>
+
+const VALID_CATEGORIES: readonly HandoffCategory[] = [
+  'user_request', 'frustration', 'out_of_scope', 'sensitive_topic', 'repeated_failure',
+]
 
 export async function handleVisitorMessage(
   deps: ChatDeps,
@@ -54,7 +61,11 @@ export async function handleVisitorMessage(
   const ragContext = ragHits.length > 0
     ? '\n\nRelevant context (use only if applicable):\n' + ragHits.map((h) => `[${h.sourceName}]\n${h.text}`).join('\n---\n')
     : ''
+
+  const handoffEnabled = cfg.value.handoffPolicy.toolEnabled && cfg.value.adminOnline
   const fullSystemPrompt = systemPrompt + ragContext
+    + (handoffEnabled ? '\n\n' + HANDOFF_TOOL_GUIDANCE : '')
+  const tools = handoffEnabled ? [HANDOFF_TOOL] : undefined
 
   const pendingAssistantId = MessageId(randomUUID())
   const ctrl = new AbortController()
@@ -62,27 +73,70 @@ export async function handleVisitorMessage(
 
   let buffer = ''
   let cost = UsdCents(0)
+  let handoffTriggered = false
+  let handoffReason: HandoffReason | null = null
+
+  const llmReq = tools !== undefined
+    ? { apiKey, model: cfg.value.agentModel, system: fullSystemPrompt, messages: history, tools, abort: ctrl.signal }
+    : { apiKey, model: cfg.value.agentModel, system: fullSystemPrompt, messages: history, abort: ctrl.signal }
+
   try {
-    for await (const ev of deps.llm.chatStream({
-      apiKey, model: cfg.value.agentModel, system: fullSystemPrompt, messages: history, abort: ctrl.signal,
-    })) {
+    for await (const ev of deps.llm.chatStream(llmReq)) {
       switch (ev.type) {
         case 'text':
+          if (handoffTriggered) break
           buffer += ev.delta
           deps.broadcast.publish(input.sessionId, { type: 'token', messageId: pendingAssistantId, delta: ev.delta })
           break
         case 'done':
           cost = ev.costCents
           break
-        case 'reasoning':
         case 'tool_start':
+          if (ev.name === 'request_human_handoff') {
+            let parsed: { reason?: unknown; category?: unknown } = {}
+            try { parsed = JSON.parse(ev.argsJson) as { reason?: unknown; category?: unknown } } catch { /* malformed args; treat as out_of_scope */ }
+            const category: HandoffCategory = typeof parsed.category === 'string' && (VALID_CATEGORIES as readonly string[]).includes(parsed.category)
+              ? (parsed.category as HandoffCategory)
+              : 'out_of_scope'
+            const toolReason = typeof parsed.reason === 'string' ? parsed.reason : 'AI requested escalation'
+            handoffReason = { kind: 'ai_decision', toolReason, category }
+            handoffTriggered = true
+            ctrl.abort()
+          }
+          break
+        case 'reasoning':
         case 'tool_end':
           break
       }
+      if (handoffTriggered) break
     }
   } catch (err) {
-    if (ctrl.signal.aborted) return Err({ kind: 'llm_unavailable', cause: 'aborted' })
-    return Err({ kind: 'llm_unavailable', cause: String(err) })
+    if (handoffTriggered) {
+      // Abort thrown by our own ctrl.abort() — not a real error
+    } else if (ctrl.signal.aborted) {
+      return Err({ kind: 'llm_unavailable', cause: 'aborted' })
+    } else {
+      return Err({ kind: 'llm_unavailable', cause: String(err) })
+    }
+  }
+
+  if (handoffTriggered && handoffReason !== null) {
+    const trans = requestHandoff(session.state, handoffReason)
+    if (trans.ok) {
+      // TODO(T109): replace with atomic updateStateIf to guard concurrent updates
+      const upd = await deps.sessionStore.updateState(input.sessionId, trans.next)
+      if (upd.ok) {
+        const sysEv = await deps.sessionStore.appendMessage({
+          sessionId: input.sessionId, role: 'system_event',
+          content: `AI escaló la conversación: ${handoffReason.toolReason}`,
+          costCents: UsdCents(0),
+        })
+        if (sysEv.ok) deps.broadcast.publish(input.sessionId, { type: 'message', message: sysEv.value })
+        deps.broadcast.publish(input.sessionId, { type: 'state_changed', from: session.state, to: trans.next })
+        deps.broadcast.publish('admin_inbox', { type: 'new_handoff', sessionId: input.sessionId, reason: handoffReason })
+      }
+    }
+    return Ok(undefined)
   }
 
   const ragHitsForPersist = ragHits.map((h) => ({ id: h.id, sourceId: h.sourceId, score: h.score }))

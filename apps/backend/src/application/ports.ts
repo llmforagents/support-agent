@@ -2,7 +2,7 @@ import type {
   AdminId, MessageId, Result, SessionId, SourceId, UsdCents, VisitorId,
   AppError,
 } from '@support/shared'
-import type { ConversationState, Message, MessageRagHit, Session } from '../domain/conversation'
+import type { ConversationState, HandoffReason, Message, MessageRagHit, Session } from '../domain/conversation'
 import type { ChunkHit, ChunkInsert, Source, SourceConfig, SourceState, SourceType } from '../domain/source'
 
 // ─── Auth & site ─────────────────────────────────────────────────────
@@ -92,6 +92,9 @@ export type BroadcastEvent =
   | { type: 'error'; error: { code: string; message: string } }
   | { type: 'source_progress'; sourceId: SourceId; processed: number; total: number }
   | { type: 'source_state'; sourceId: SourceId; status: string }
+  | { type: 'new_handoff'; sessionId: SessionId; reason: HandoffReason }
+  | { type: 'session_claimed'; sessionId: SessionId; operatorId: AdminId }
+  | { type: 'session_released'; sessionId: SessionId }
 
 export interface BroadcastPort {
   publish(channel: BroadcastChannel, event: BroadcastEvent): void
