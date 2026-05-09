@@ -71,6 +71,10 @@ export interface SessionStorePort {
   createSession(input: { visitorId: VisitorId; visitorMeta: Session['visitorMeta'] }): Promise<Result<Session, AppError>>
   getSession(id: SessionId): Promise<Result<Session, AppError>>
   updateState(id: SessionId, state: ConversationState): Promise<Result<void, AppError>>
+  /** Atomic conditional update: only writes if the current state.status matches expectedStatus. */
+  updateStateIf(id: SessionId, expectedStatus: ConversationState['status'], next: ConversationState): Promise<Result<{ updated: boolean }, AppError>>
+  /** List sessions, optionally filtered by state status, sorted by lastActivityAt DESC. */
+  listSessions(opts: { status?: ConversationState['status']; limit: number; cursor?: SessionId }): Promise<Result<readonly Session[], AppError>>
   appendMessage(input: { sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents }): Promise<Result<Message, AppError>>
   appendMessageWithId(input: { id: MessageId; sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents; ragHits?: ReadonlyArray<MessageRagHit> }): Promise<Result<Message, AppError>>
   listMessages(id: SessionId, opts: { limit: number; afterId?: MessageId }): Promise<Result<readonly Message[], AppError>>

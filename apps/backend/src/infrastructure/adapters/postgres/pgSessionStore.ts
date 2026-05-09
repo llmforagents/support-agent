@@ -63,6 +63,37 @@ export class PgSessionStore implements SessionStorePort {
     } catch (err) { return Err({ kind: 'infra_db_error', cause: String(err) }) }
   }
 
+  async updateStateIf(id: SessionId, expectedStatus: ConversationState['status'], next: ConversationState): Promise<Result<{ updated: boolean }, AppError>> {
+    try {
+      const r = await this.pool.query(
+        `UPDATE sessions SET state = $1::jsonb, last_activity_at = NOW()
+         WHERE id = $2 AND state->>'status' = $3`,
+        [JSON.stringify(next), id, expectedStatus],
+      )
+      return Ok({ updated: (r.rowCount ?? 0) > 0 })
+    } catch (err) { return Err({ kind: 'infra_db_error', cause: String(err) }) }
+  }
+
+  async listSessions(opts: { status?: ConversationState['status']; limit: number; cursor?: SessionId }): Promise<Result<readonly Session[], AppError>> {
+    try {
+      let r
+      if (opts.status !== undefined) {
+        r = await this.pool.query<SRow>(
+          `SELECT id, visitor_id, state, visitor_meta, total_cost_cents, created_at, last_activity_at, closed_at
+           FROM sessions WHERE state->>'status' = $1 ORDER BY last_activity_at DESC LIMIT $2`,
+          [opts.status, opts.limit],
+        )
+      } else {
+        r = await this.pool.query<SRow>(
+          `SELECT id, visitor_id, state, visitor_meta, total_cost_cents, created_at, last_activity_at, closed_at
+           FROM sessions ORDER BY last_activity_at DESC LIMIT $1`,
+          [opts.limit],
+        )
+      }
+      return Ok(r.rows.map(rowToSession))
+    } catch (err) { return Err({ kind: 'infra_db_error', cause: String(err) }) }
+  }
+
   appendMessage(input: { sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents }): Promise<Result<Message, AppError>> {
     return this.appendMessageWithId({ id: MessageId(randomUUID()), ...input })
   }

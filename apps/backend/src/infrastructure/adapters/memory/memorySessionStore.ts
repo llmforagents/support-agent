@@ -33,6 +33,23 @@ export class MemorySessionStore implements SessionStorePort {
     return Promise.resolve(Ok(undefined))
   }
 
+  updateStateIf(id: SessionId, expectedStatus: ConversationState['status'], next: ConversationState): Promise<Result<{ updated: boolean }, AppError>> {
+    const s = this.sessions.get(id)
+    if (!s) return Promise.resolve(Err({ kind: 'session_not_found', sessionId: id }))
+    if (s.state.status !== expectedStatus) return Promise.resolve(Ok({ updated: false }))
+    this.sessions.set(id, { ...s, state: next })
+    return Promise.resolve(Ok({ updated: true }))
+  }
+
+  listSessions(opts: { status?: ConversationState['status']; limit: number; cursor?: SessionId }): Promise<Result<readonly Session[], AppError>> {
+    let list = [...this.sessions.values()]
+    if (opts.status !== undefined) {
+      list = list.filter((s) => s.state.status === opts.status)
+    }
+    list.sort((a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime())
+    return Promise.resolve(Ok(list.slice(0, opts.limit)))
+  }
+
   appendMessage(input: { sessionId: SessionId; role: Message['role']; content: string; costCents: UsdCents }): Promise<Result<Message, AppError>> {
     return this.appendMessageWithId({ id: MessageId(randomUUID()), ...input })
   }
