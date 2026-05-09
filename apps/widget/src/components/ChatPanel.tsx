@@ -12,6 +12,8 @@ export type ChatPanelProps = Readonly<{
   /** Streamed partial token from the current assistant turn, or null */
   streamingToken: string | null
   sending: boolean
+  /** Current conversation status, e.g. 'handoff_requested' | 'active_operator' */
+  conversationStatus?: string
   onSend: (content: string) => void
   onClose: () => void
 }>
@@ -21,6 +23,7 @@ export function ChatPanel({
   messages,
   streamingToken,
   sending,
+  conversationStatus,
   onSend,
   onClose,
 }: ChatPanelProps): JSX.Element {
@@ -50,6 +53,7 @@ export function ChatPanel({
         siteName={config.siteName}
         primaryColor={config.primaryColor}
         adminOnline={config.adminOnline}
+        {...(conversationStatus !== undefined ? { conversationStatus } : {})}
         onClose={onClose}
       />
 

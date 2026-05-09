@@ -6,6 +6,8 @@ const messages = {
   'widget.placeholder': 'Type a message…',
   'widget.statusOnline': '● Online',
   'widget.statusOffline': '○ We\'ll reply soon',
+  'widget.statusHandoff': '⏳ Looking for an operator…',
+  'widget.statusOperator': '● Operator connected',
   'widget.send': 'Send',
   'widget.close': 'Close',
 } as const

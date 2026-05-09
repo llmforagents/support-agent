@@ -34,6 +34,7 @@ function App(): JSX.Element {
   const [messages, setMessages] = useState<readonly ChatMessage[]>([])
   const [streamingToken, setStreamingToken] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [conversationStatus, setConversationStatus] = useState<string | undefined>(undefined)
 
   const sseRef = useRef<SseClient | null>(null)
   const pendingMessageIdRef = useRef<string | null>(null)
@@ -150,6 +151,9 @@ function App(): JSX.Element {
         break
 
       case 'state_changed':
+        setConversationStatus(event.to.status)
+        break
+
       case 'ping':
         break
     }
@@ -247,6 +251,7 @@ function App(): JSX.Element {
         messages={messages}
         streamingToken={streamingToken}
         sending={sending}
+        {...(conversationStatus !== undefined ? { conversationStatus } : {})}
         onSend={handleSend}
         onClose={handleClose}
       />

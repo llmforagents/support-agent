@@ -5,10 +5,29 @@ export type HeaderProps = Readonly<{
   siteName: string
   primaryColor: string
   adminOnline: boolean
+  /** Conversation-level status overrides the admin online indicator when set */
+  conversationStatus?: string
   onClose: () => void
 }>
 
-export function Header({ siteName, primaryColor, adminOnline, onClose }: HeaderProps): JSX.Element {
+export function Header({ siteName, primaryColor, adminOnline, conversationStatus, onClose }: HeaderProps): JSX.Element {
+  let statusLabel: string
+  let statusColor: string
+
+  if (conversationStatus === 'handoff_requested') {
+    statusLabel = t('widget.statusHandoff')
+    statusColor = '#f59e0b'
+  } else if (conversationStatus === 'active_operator') {
+    statusLabel = t('widget.statusOperator')
+    statusColor = '#22c55e'
+  } else if (adminOnline) {
+    statusLabel = t('widget.statusOnline')
+    statusColor = 'rgba(255,255,255,0.85)'
+  } else {
+    statusLabel = t('widget.statusOffline')
+    statusColor = 'rgba(255,255,255,0.6)'
+  }
+
   return (
     <div
       style={{
@@ -22,18 +41,17 @@ export function Header({ siteName, primaryColor, adminOnline, onClose }: HeaderP
         flexShrink: 0,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <span style={{ fontWeight: 600, fontSize: '15px' }}>{siteName}</span>
         <span
-          title={adminOnline ? t('widget.statusOnline') : t('widget.statusOffline')}
           style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: adminOnline ? '#4ade80' : '#9ca3af',
-            display: 'inline-block',
+            fontSize: '11px',
+            color: statusColor,
+            lineHeight: 1.2,
           }}
-        />
+        >
+          {statusLabel}
+        </span>
       </div>
       <button
         type="button"
