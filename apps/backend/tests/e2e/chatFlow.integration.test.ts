@@ -9,6 +9,7 @@ import { PgSessionStore } from '../../src/infrastructure/adapters/postgres/pgSes
 import { PgKnowledgeStore } from '../../src/infrastructure/adapters/postgres/pgKnowledgeStore'
 import { PgvectorStore } from '../../src/infrastructure/adapters/postgres/pgvectorStore'
 import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
+import { HandoffTimeoutScheduler } from '../../src/infrastructure/sse/handoffTimeoutScheduler'
 import { encrypt, decrypt } from '../../src/infrastructure/crypto/encryption'
 import { hashPassword } from '../../src/infrastructure/crypto/passwordHash'
 import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
@@ -43,19 +44,23 @@ describe('chat flow @integration', () => {
       COOKIE_SECURE: false, LOG_LEVEL: 'silent', METRICS_ENABLED: false,
       MAX_BODY_BYTES: 64 * 1024, SSE_MAX_CONNECTIONS: 2_000, SSE_MAX_LIFETIME_MS: 4 * 60 * 60 * 1000,
     } as never
+    const sessionStore = new PgSessionStore(pg.pool)
+    const broadcast = new InProcessSseHub()
     const container: Container = {
       env,
       adminStore: new PgAdminStore(pg.pool),
       adminSessionStore: new PgAdminSessionStore(pg.pool),
       siteConfigStore: new PgSiteConfigStore(pg.pool),
-      sessionStore: new PgSessionStore(pg.pool),
-      broadcast: new InProcessSseHub(),
+      sessionStore,
+      broadcast,
       llm: stubLlm,
       knowledgeStore: new PgKnowledgeStore(pg.pool),
       vectorStore: new PgvectorStore(pg.pool),
       fileStore: new MemoryFileStore(),
       embedder: new MemoryEmbedder(1536),
       mysqlConnectionStore: new MemoryMysqlConnectionStore(),
+      // Instantiate but do NOT call .start() in tests
+      handoffTimeoutScheduler: new HandoffTimeoutScheduler(sessionStore, broadcast, pino({ level: 'silent' })),
       logger: pino({ level: 'silent' }),
       sha256,
       encrypt: (s) => encrypt(s, ENC),

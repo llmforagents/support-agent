@@ -12,6 +12,8 @@ import { MemoryVectorStore } from '../../src/infrastructure/adapters/memory/memo
 import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
 import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
+import { HandoffTimeoutScheduler } from '../../src/infrastructure/sse/handoffTimeoutScheduler'
+import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
 
 const silentLogger = pino({ level: 'silent' })
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -20,11 +22,14 @@ export function buildTestApp(): { app: Hono; container: Container } {
   const adminStore = new MemoryAdminStore()
   const adminSessionStore = new MemoryAdminSessionStore()
   const siteConfigStore = new MemorySiteConfigStore()
-  const broadcast = { publish: () => undefined, subscribe: () => () => undefined } as unknown as Container['broadcast']
+  const sessionStore = new MemorySessionStore()
+  const broadcast = new InProcessSseHub()
   const knowledgeStore = new MemoryKnowledgeStore()
   const vectorStore = new MemoryVectorStore(knowledgeStore)
   const fileStore = new MemoryFileStore()
   const embedder = new MemoryEmbedder(1536)
+  // Instantiate but do NOT call .start() — tests drive ticks manually or use fake timers
+  const handoffTimeoutScheduler = new HandoffTimeoutScheduler(sessionStore, broadcast, silentLogger)
 
   const env = {
     NODE_ENV: 'development', PORT: 3001,
@@ -39,9 +44,10 @@ export function buildTestApp(): { app: Hono; container: Container } {
 
   const container: Container = {
     env, adminStore, adminSessionStore, siteConfigStore, broadcast,
-    sessionStore: new MemorySessionStore(), llm: null as never, logger: silentLogger, sha256,
+    sessionStore, llm: null as never, logger: silentLogger, sha256,
     knowledgeStore, vectorStore, fileStore, embedder,
     mysqlConnectionStore: new MemoryMysqlConnectionStore(),
+    handoffTimeoutScheduler,
     encrypt: (s) => `enc::${s}`,
     decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s,
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },

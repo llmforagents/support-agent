@@ -16,6 +16,7 @@ import { PgvectorStore } from '../infrastructure/adapters/postgres/pgvectorStore
 import { LocalFileStore } from '../infrastructure/adapters/filesystem/localFileStore'
 import { Llm4AgentsEmbedderAdapter } from '../infrastructure/adapters/llm4agents/embedderAdapter'
 import { InProcessSseHub } from '../infrastructure/sse/inProcessSseHub'
+import { HandoffTimeoutScheduler } from '../infrastructure/sse/handoffTimeoutScheduler'
 import { Llm4AgentsLlmAdapter } from '../infrastructure/adapters/llm4agents/llmAdapter'
 import { PgMysqlConnectionStore } from '../infrastructure/adapters/postgres/pgMysqlConnectionStore'
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
@@ -34,6 +35,7 @@ export type Container = Readonly<{
   fileStore: FileStorePort
   embedder: EmbedderPort
   mysqlConnectionStore: MysqlConnectionStorePort
+  handoffTimeoutScheduler: HandoffTimeoutScheduler
   sha256: (s: string) => string
   encrypt: (plaintext: string) => string
   decrypt: (envelope: string) => string
@@ -63,19 +65,25 @@ export async function composeContainer(env: Env): Promise<Container> {
   const encrypt = (plaintext: string) => rawEncrypt(plaintext, env.ENCRYPTION_KEY)
   const decrypt = (envelope: string) => rawDecrypt(envelope, env.ENCRYPTION_KEY)
 
+  const sessionStore = new PgSessionStore(pool)
+  const broadcast = new InProcessSseHub(logger)
+  const handoffTimeoutScheduler = new HandoffTimeoutScheduler(sessionStore, broadcast, logger)
+  handoffTimeoutScheduler.start()
+
   return {
     env,
     adminStore: new PgAdminStore(pool),
     adminSessionStore: new PgAdminSessionStore(pool),
     siteConfigStore: new PgSiteConfigStore(pool),
-    sessionStore: new PgSessionStore(pool),
-    broadcast: new InProcessSseHub(logger),
+    sessionStore,
+    broadcast,
     llm: new Llm4AgentsLlmAdapter(undefined, env.LLM4AGENTS_API_BASE),
     knowledgeStore: new PgKnowledgeStore(pool),
     vectorStore: new PgvectorStore(pool),
     fileStore: new LocalFileStore(env.FILE_STORE_PATH),
     embedder: new Llm4AgentsEmbedderAdapter('openai/text-embedding-3-small', 1536, env.LLM4AGENTS_API_BASE),
     mysqlConnectionStore: new PgMysqlConnectionStore(pool, encrypt, decrypt),
+    handoffTimeoutScheduler,
     sha256,
     encrypt,
     decrypt,
@@ -84,6 +92,9 @@ export async function composeContainer(env: Env): Promise<Container> {
       db: () => pingPool(pool),
       llm: () => pingLlm(env.LLM4AGENTS_API_BASE),
     },
-    shutdown: async () => { await pool.end() },
+    shutdown: async () => {
+      handoffTimeoutScheduler.stop()
+      await pool.end()
+    },
   }
 }
