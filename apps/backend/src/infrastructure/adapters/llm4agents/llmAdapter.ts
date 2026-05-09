@@ -1,11 +1,28 @@
 import { LLM4AgentsClient } from '@llmforagents/sdk'
+import type { ToolDefinition } from '@llmforagents/sdk'
 import { UsdCents } from '@support/shared'
-import type { LlmPort, LlmRequest, LlmStreamEvent } from '../../../application/ports'
+import type { LlmPort, LlmRequest, LlmStreamEvent, LlmTool } from '../../../application/ports'
 
 export type LlmClientFactory = (apiKey: string, apiBase?: string) => InstanceType<typeof LLM4AgentsClient>
 
 const realFactory: LlmClientFactory = (apiKey, apiBase) =>
   new LLM4AgentsClient({ apiKey, ...(apiBase ? { baseUrl: apiBase } : {}) })
+
+/**
+ * Minimal shim that adapts a plain LlmTool[] to the shape the SDK's
+ * conversation() expects for its `tools` option. The SDK only calls
+ * `getDefinitions()` on this object — it never calls `call()` because
+ * the handoff tool is intercepted at the stream level, not executed by the SDK.
+ * Cast to `never` because the SDK's Tools class is not exported.
+ */
+function makeToolShim(tools: readonly LlmTool[]): never {
+  return {
+    getDefinitions: () => Promise.resolve(tools as unknown as ToolDefinition[]),
+    // call() is unreachable: handoff tool is handled by stream consumer before tool_end fires
+    call: (_name: string, _args: Readonly<Record<string, unknown>>) =>
+      Promise.resolve({ content: [], text: '' }),
+  } as never
+}
 
 // Internal type that covers both the real SDK `done` shape (response.usage)
 // and the flat `usage` shape used in unit test mocks.
@@ -33,6 +50,7 @@ export class Llm4AgentsLlmAdapter implements LlmPort {
         content: m.content,
       })),
       signal: req.abort,
+      ...(req.tools && req.tools.length > 0 ? { tools: makeToolShim(req.tools) } : {}),
     })
     const lastUserMsg = req.messages[req.messages.length - 1]?.content ?? ''
     for await (const raw of conv.stream(lastUserMsg) as AsyncIterable<CompatEvent>) {

@@ -161,11 +161,25 @@ export type LlmStreamEvent =
   | { type: 'tool_end'; name: string; resultText: string; durationMs: number }
   | { type: 'done'; usage: { promptTokens: number; completionTokens: number }; costCents: UsdCents }
 
+/**
+ * Minimal tool definition shape that any LLM adapter must accept.
+ * HandoffTool (from handoffPrompt.ts) is structurally assignable to this.
+ */
+export type LlmTool = Readonly<{
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: Readonly<Record<string, unknown>>
+  }
+}>
+
 export type LlmRequest = Readonly<{
   apiKey: string
   model: string
   system: string
   messages: ReadonlyArray<{ role: 'user' | 'assistant'; content: string }>
+  tools?: readonly LlmTool[]
   abort: AbortSignal
 }>
 
