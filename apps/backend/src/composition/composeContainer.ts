@@ -3,6 +3,7 @@ import type { Env } from '@support/shared'
 import type {
   AdminStorePort, AdminSessionStorePort, SiteConfigStorePort, SessionStorePort,
   BroadcastPort, LlmPort, KnowledgeStorePort, VectorStorePort, FileStorePort, EmbedderPort,
+  MysqlConnectionStorePort,
 } from '../application/ports'
 import { createPool, pingPool } from '../infrastructure/adapters/postgres/pool'
 import { runMigrations } from '../infrastructure/adapters/postgres/runMigrations'
@@ -16,6 +17,7 @@ import { LocalFileStore } from '../infrastructure/adapters/filesystem/localFileS
 import { Llm4AgentsEmbedderAdapter } from '../infrastructure/adapters/llm4agents/embedderAdapter'
 import { InProcessSseHub } from '../infrastructure/sse/inProcessSseHub'
 import { Llm4AgentsLlmAdapter } from '../infrastructure/adapters/llm4agents/llmAdapter'
+import { PgMysqlConnectionStore } from '../infrastructure/adapters/postgres/pgMysqlConnectionStore'
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
 import { createLogger, type Logger } from '../infrastructure/observability/logger'
 
@@ -31,6 +33,7 @@ export type Container = Readonly<{
   vectorStore: VectorStorePort
   fileStore: FileStorePort
   embedder: EmbedderPort
+  mysqlConnectionStore: MysqlConnectionStorePort
   sha256: (s: string) => string
   encrypt: (plaintext: string) => string
   decrypt: (envelope: string) => string
@@ -57,6 +60,8 @@ export async function composeContainer(env: Env): Promise<Container> {
   await runMigrations(pool, logger)
 
   const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
+  const encrypt = (plaintext: string) => rawEncrypt(plaintext, env.ENCRYPTION_KEY)
+  const decrypt = (envelope: string) => rawDecrypt(envelope, env.ENCRYPTION_KEY)
 
   return {
     env,
@@ -70,9 +75,10 @@ export async function composeContainer(env: Env): Promise<Container> {
     vectorStore: new PgvectorStore(pool),
     fileStore: new LocalFileStore(env.FILE_STORE_PATH),
     embedder: new Llm4AgentsEmbedderAdapter('openai/text-embedding-3-small', 1536, env.LLM4AGENTS_API_BASE),
+    mysqlConnectionStore: new PgMysqlConnectionStore(pool, encrypt, decrypt),
     sha256,
-    encrypt: (plaintext) => rawEncrypt(plaintext, env.ENCRYPTION_KEY),
-    decrypt: (envelope) => rawDecrypt(envelope, env.ENCRYPTION_KEY),
+    encrypt,
+    decrypt,
     logger,
     healthChecks: {
       db: () => pingPool(pool),

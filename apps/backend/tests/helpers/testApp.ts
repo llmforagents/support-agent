@@ -11,6 +11,7 @@ import { MemoryKnowledgeStore } from '../../src/infrastructure/adapters/memory/m
 import { MemoryVectorStore } from '../../src/infrastructure/adapters/memory/memoryVectorStore'
 import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
 import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
+import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
 
 const silentLogger = pino({ level: 'silent' })
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -40,6 +41,7 @@ export function buildTestApp(): { app: Hono; container: Container } {
     env, adminStore, adminSessionStore, siteConfigStore, broadcast,
     sessionStore: new MemorySessionStore(), llm: null as never, logger: silentLogger, sha256,
     knowledgeStore, vectorStore, fileStore, embedder,
+    mysqlConnectionStore: new MemoryMysqlConnectionStore(),
     encrypt: (s) => `enc::${s}`,
     decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s,
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },

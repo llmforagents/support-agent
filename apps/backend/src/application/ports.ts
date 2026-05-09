@@ -125,6 +125,28 @@ export interface FileStorePort {
   delete(ref: string): Promise<Result<void, AppError>>
 }
 
+// ─── MySQL connections ───────────────────────────────────────────────
+export type MysqlConnectionRow = Readonly<{
+  id: string
+  name: string
+  host: string
+  port: number
+  database: string
+  user: string
+  ssl: boolean
+  createdAt: Date
+  updatedAt: Date
+}>
+
+export interface MysqlConnectionStorePort {
+  createConnection(input: { name: string; host: string; port: number; database: string; user: string; password: string; ssl: boolean }): Promise<Result<MysqlConnectionRow, AppError>>
+  listConnections(): Promise<Result<readonly MysqlConnectionRow[], AppError>>
+  getConnection(id: string): Promise<Result<MysqlConnectionRow, AppError>>
+  /** Returns full credentials. NEVER expose via public route. */
+  getCredentials(id: string): Promise<Result<{ host: string; port: number; database: string; user: string; password: string; ssl: boolean }, AppError>>
+  deleteConnection(id: string): Promise<Result<void, AppError>>
+}
+
 // ─── Embedder ─────────────────────────────────────────────────────────
 export interface EmbedderPort {
   embed(texts: readonly string[], apiKey: string): Promise<Result<readonly (readonly number[])[], AppError>>

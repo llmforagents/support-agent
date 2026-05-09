@@ -34,6 +34,9 @@ function toHttpResponse(e: AppError): HttpResponse {
     case 'file_read_failed':          return { status: 500, body: { error: 'file_read_failed', kind: e.kind } }
     case 'source_not_found':          return { status: 404, body: { error: 'source_not_found', kind: e.kind } }
     case 'source_invalid_state':      return { status: 409, body: { error: 'source_invalid_state', kind: e.kind, detail: { current: e.current, required: e.required } } }
+    case 'mysql_unsafe_query':        return { status: 422, body: { error: 'mysql_unsafe_query', kind: e.kind, detail: { reason: e.reason } } }
+    case 'mysql_query_timeout':       return { status: 504, body: { error: 'mysql_query_timeout', kind: e.kind, detail: { timeoutMs: e.timeoutMs } } }
+    case 'mysql_connection_refused':  return { status: 502, body: { error: 'mysql_connection_refused', kind: e.kind, detail: { host: e.host } } }
   }
 }
 
@@ -54,7 +57,7 @@ export function errorHandler(): MiddlewareHandler {
       if (r.status >= 500) log?.error({ requestId, kind: err.appError.kind, err }, 'app error 5xx')
       else log?.warn?.({ requestId, kind: err.appError.kind }, 'app error')
       // c.res must be set directly to override Hono's default error handler
-      c.res = c.json(r.body, r.status as 400 | 401 | 402 | 403 | 404 | 409 | 410 | 415 | 422 | 429 | 500 | 502)
+      c.res = c.json(r.body, r.status as 400 | 401 | 402 | 403 | 404 | 409 | 410 | 415 | 422 | 429 | 500 | 502 | 504)
       return
     }
 

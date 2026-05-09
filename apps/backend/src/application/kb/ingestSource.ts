@@ -34,7 +34,10 @@ function asIngestError(e: AppError): IngestError {
     e.kind === 'unsupported_file_type' ||
     e.kind === 'file_read_failed' ||
     e.kind === 'source_not_found' ||
-    e.kind === 'source_invalid_state'
+    e.kind === 'source_invalid_state' ||
+    e.kind === 'mysql_unsafe_query' ||
+    e.kind === 'mysql_query_timeout' ||
+    e.kind === 'mysql_connection_refused'
   ) {
     return e
   }

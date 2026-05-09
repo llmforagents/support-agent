@@ -13,6 +13,7 @@ import { encrypt, decrypt } from '../../src/infrastructure/crypto/encryption'
 import { hashPassword } from '../../src/infrastructure/crypto/passwordHash'
 import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
 import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
+import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import type { Container } from '../../src/composition/composeContainer'
 import pino from 'pino'
 import { SessionId } from '@support/shared'
@@ -54,6 +55,7 @@ describe('chat flow @integration', () => {
       vectorStore: new PgvectorStore(pg.pool),
       fileStore: new MemoryFileStore(),
       embedder: new MemoryEmbedder(1536),
+      mysqlConnectionStore: new MemoryMysqlConnectionStore(),
       logger: pino({ level: 'silent' }),
       sha256,
       encrypt: (s) => encrypt(s, ENC),

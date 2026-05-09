@@ -33,6 +33,9 @@ export type IngestError =
   | { kind: 'file_read_failed'; cause: string }
   | { kind: 'source_not_found' }
   | { kind: 'source_invalid_state'; current: string; required: readonly string[] }
+  | { kind: 'mysql_unsafe_query'; reason: 'denied_keyword' | 'multiple_statements' | 'parse_error' | 'not_select' }
+  | { kind: 'mysql_query_timeout'; timeoutMs: number }
+  | { kind: 'mysql_connection_refused'; host: string }
 
 export type AppError =
   | AuthError
