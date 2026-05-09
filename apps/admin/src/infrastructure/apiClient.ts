@@ -46,6 +46,39 @@ async function request<T>(
   return res.json() as Promise<T>
 }
 
+export type Session = {
+  readonly id: string
+  readonly visitorId: string
+  readonly state: { readonly status: string; readonly [k: string]: unknown }
+  readonly visitorMeta: { readonly url?: string; readonly userAgent?: string; readonly language?: string }
+  readonly totalCostCents: number
+  readonly createdAt: string
+  readonly lastActivityAt: string
+  readonly closedAt?: string
+}
+
+export type Message = {
+  readonly id: string
+  readonly sessionId: string
+  readonly role: 'visitor' | 'assistant' | 'operator' | 'system_event'
+  readonly content: string
+  readonly costCents: number
+  readonly createdAt: string
+  readonly ragHits?: ReadonlyArray<{ readonly id: string; readonly sourceId: string; readonly score: number }>
+}
+
+export type MysqlConnection = {
+  readonly id: string
+  readonly name: string
+  readonly host: string
+  readonly port: number
+  readonly database: string
+  readonly user: string
+  readonly ssl: boolean
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
 export type Source = {
   readonly id: string
   readonly name: string
@@ -125,5 +158,84 @@ export const apiClient = {
   },
   sourcePreview(id: string, n = 5): Promise<{ readonly chunks: readonly ChunkPreview[] }> {
     return request(`/sources/${id}/preview?n=${n}`)
+  },
+
+  // ── Inbox / Sessions ────────────────────────────────────────────────────────
+  sessionsList(status?: string): Promise<{ readonly sessions: readonly Session[] }> {
+    return request(
+      status !== undefined
+        ? `/sessions?status=${encodeURIComponent(status)}`
+        : '/sessions',
+    )
+  },
+  sessionGet(id: string): Promise<Session> {
+    return request(`/sessions/${id}`)
+  },
+  sessionMessages(
+    id: string,
+    opts?: { readonly limit?: number; readonly afterId?: string },
+  ): Promise<{ readonly messages: readonly Message[] }> {
+    const qs = new URLSearchParams()
+    if (opts?.limit !== undefined) qs.set('limit', String(opts.limit))
+    if (opts?.afterId !== undefined) qs.set('afterId', opts.afterId)
+    const q = qs.toString()
+    return request(`/sessions/${id}/messages${q ? `?${q}` : ''}`)
+  },
+  sessionClaim(id: string): Promise<{ readonly ok: true }> {
+    return request(`/sessions/${id}/claim`, { method: 'POST' })
+  },
+  sessionRelease(id: string): Promise<{ readonly ok: true }> {
+    return request(`/sessions/${id}/release`, { method: 'POST' })
+  },
+  sessionClose(id: string): Promise<{ readonly ok: true }> {
+    return request(`/sessions/${id}/close`, { method: 'POST' })
+  },
+  sessionSendOperatorMessage(id: string, content: string): Promise<{ readonly ok: true }> {
+    return request(`/sessions/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    })
+  },
+
+  // ── MySQL connections ────────────────────────────────────────────────────────
+  mysqlConnectionsList(): Promise<{ readonly connections: readonly MysqlConnection[] }> {
+    return request('/mysql-connections')
+  },
+  mysqlConnectionCreate(input: {
+    readonly name: string
+    readonly host: string
+    readonly port: number
+    readonly database: string
+    readonly user: string
+    readonly password: string
+    readonly ssl: boolean
+  }): Promise<MysqlConnection> {
+    return request('/mysql-connections', { method: 'POST', body: JSON.stringify(input) })
+  },
+  mysqlConnectionDelete(id: string): Promise<{ readonly ok: true }> {
+    return request(`/mysql-connections/${id}`, { method: 'DELETE' })
+  },
+  mysqlConnectionTest(id: string): Promise<{ readonly ok: boolean; readonly error?: string }> {
+    return request(`/mysql-connections/${id}/test`, { method: 'POST' })
+  },
+  mysqlValidateQuery(
+    id: string,
+    query: string,
+  ): Promise<{ readonly ok: boolean; readonly reason?: string; readonly safeSql?: string }> {
+    return request(`/mysql-connections/${id}/validate-query`, {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    })
+  },
+  sourceCreateMysql(input: {
+    readonly name: string
+    readonly connectionId: string
+    readonly query: string
+    readonly rowTemplate: string
+  }): Promise<Source> {
+    return request('/sources', {
+      method: 'POST',
+      body: JSON.stringify({ ...input, sourceType: 'mysql_query' }),
+    })
   },
 }

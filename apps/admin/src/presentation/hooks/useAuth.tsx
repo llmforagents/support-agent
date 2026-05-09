@@ -8,12 +8,13 @@ import React, {
 import { apiClient, ApiError } from '@/infrastructure/apiClient'
 
 interface MeResponse {
+  readonly id: string
   readonly email: string
 }
 
 type AuthState =
   | { readonly status: 'loading' }
-  | { readonly status: 'authenticated'; readonly email: string }
+  | { readonly status: 'authenticated'; readonly id: string; readonly email: string }
   | { readonly status: 'unauthenticated' }
 
 interface AuthContextValue {
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
   const refresh = useCallback(async (): Promise<void> => {
     try {
       const me = await apiClient.get<MeResponse>('/auth/me')
-      setAuth({ status: 'authenticated', email: me.email })
+      setAuth({ status: 'authenticated', id: me.id, email: me.email })
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setAuth({ status: 'unauthenticated' })

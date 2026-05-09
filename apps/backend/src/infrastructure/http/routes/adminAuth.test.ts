@@ -64,6 +64,9 @@ describe('admin auth routes', () => {
     const cookie = login.headers.get('Set-Cookie')?.split(';')[0] ?? ''
     const me = await app.request('/v1/admin/auth/me', { headers: { cookie } })
     expect(me.status).toBe(200)
-    expect(await me.json()).toEqual({ email: 'a@b.com' })
+    const body = await me.json() as { id: string; email: string }
+    expect(body.email).toBe('a@b.com')
+    expect(typeof body.id).toBe('string')
+    expect(body.id.length).toBeGreaterThan(0)
   })
 })

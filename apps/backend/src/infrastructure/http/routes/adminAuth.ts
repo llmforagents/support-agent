@@ -66,7 +66,7 @@ export function adminAuthRoutes(c: Container): Hono {
     const token = getCookie(ctx, 'session') ?? ''
     const r = await verifySession({ adminStore: c.adminStore, sessionStore: c.adminSessionStore, sha256: c.sha256 }, token)
     if (!r.ok) throw new AppHttpError(r.error)
-    return ctx.json({ email: r.value.email })
+    return ctx.json({ id: r.value.id, email: r.value.email })
   })
 
   return app
