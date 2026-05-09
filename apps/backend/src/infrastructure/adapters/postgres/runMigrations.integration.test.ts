@@ -16,5 +16,6 @@ describe('runMigrations @integration', () => {
     expect(names).toContain('schema_migrations')
     expect(names).toContain('sources')
     expect(names).toContain('chunks')
+    expect(names).toContain('mysql_connections')
   })
 })
