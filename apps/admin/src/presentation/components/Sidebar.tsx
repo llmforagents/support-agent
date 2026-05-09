@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/cn'
+import { OnlineToggle } from '@/presentation/components/admin/OnlineToggle'
 
 type Item = { readonly to: string; readonly icon: string; readonly label: string }
 
@@ -12,6 +13,7 @@ export function Sidebar(): React.JSX.Element {
   const { pathname } = useLocation()
   return (
     <aside className="flex w-16 flex-col items-center gap-4 border-r border-zinc-200 bg-white py-4">
+      <OnlineToggle />
       {items.map((it) => (
         <Link
           key={it.to}

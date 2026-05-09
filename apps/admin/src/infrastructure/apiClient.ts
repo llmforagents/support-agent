@@ -197,6 +197,17 @@ export const apiClient = {
     })
   },
 
+  // ── Admin config ────────────────────────────────────────────────────────────
+  configGet(): Promise<{ readonly adminOnline?: boolean; readonly onboardingCompleted?: boolean; readonly [k: string]: unknown }> {
+    return request('/config')
+  },
+  adminSetOnline(online: boolean): Promise<{ readonly ok: true }> {
+    return request('/config/online', {
+      method: 'PUT',
+      body: JSON.stringify({ online }),
+    })
+  },
+
   // ── MySQL connections ────────────────────────────────────────────────────────
   mysqlConnectionsList(): Promise<{ readonly connections: readonly MysqlConnection[] }> {
     return request('/mysql-connections')
