@@ -20,6 +20,7 @@ import { widgetSessionRoutes } from './routes/widgetSessions'
 import { widgetStreamRoutes } from './routes/widgetStream'
 import { widgetAssetRoutes } from './routes/widgetAssets'
 import { operatorRoutes } from './routes/operator'
+import { adminInboxRoutes } from './routes/adminInbox'
 
 export function createApp(c: Container): Hono {
   const app = new Hono()
@@ -49,6 +50,7 @@ export function createApp(c: Container): Hono {
   app.use('/v1/admin/sources/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/mysql-connections/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/sessions/*', csrf({ secure: c.env.COOKIE_SECURE }))
+  app.route('/v1/admin/sessions', adminInboxRoutes(c))
   app.route('/v1/admin/sessions', operatorRoutes(c))
   app.route('/v1/admin/onboarding', adminOnboardingRoutes(c))
   app.route('/v1/admin/config', adminConfigRoutes(c))

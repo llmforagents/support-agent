@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { VisitorId, UsdCents, SessionId } from '@support/shared'
+import { VisitorId, SessionId } from '@support/shared'
 import { MemorySessionStore } from './memorySessionStore'
 import type { ConversationState } from '../../../domain/conversation'
 
