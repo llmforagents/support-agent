@@ -40,6 +40,39 @@ After onboarding, paste the snippet shown on the last step into your website's H
 
 For production deployments with TLS, see [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md).
 
+## Deploy to Cloudflare
+
+This project ships with a Workers-compatible build that uses D1, R2, Vectorize, and Durable Objects in place of Postgres + pgvector + local files + in-process pubsub.
+
+```bash
+# 1. Install wrangler if you don't have it
+pnpm add -g wrangler
+
+# 2. Create the D1 database (the id goes into wrangler.toml)
+wrangler d1 create support-llm4agents
+
+# 3. Create the Vectorize index (dimension must match your embedding model)
+wrangler vectorize create support-llm4agents-chunks --dimensions=1536 --metric=cosine
+
+# 4. Create the R2 bucket
+wrangler r2 bucket create support-llm4agents-files
+
+# 5. Put the database_id wrangler printed in `apps/backend/wrangler.toml`
+# 6. Put your secrets
+wrangler secret put ENCRYPTION_KEY        # 32-byte hex (openssl rand -hex 32)
+wrangler secret put COOKIE_SECRET         # 32+ char string
+wrangler secret put STREAM_TOKEN_SECRET   # 32+ char string
+
+# 7. Deploy
+cd apps/backend && pnpm dlx wrangler deploy
+```
+
+**Limitations on Cloudflare:**
+
+- **MySQL data sources are not supported** (the `mysql2` driver isn't compatible with the Workers runtime). The route layer returns a 422 with `mysql_unsupported_on_driver` if you try to create one. Use the Postgres deployment if you need MySQL ingest.
+- The handoff timeout runs as a Durable Object alarm, so the cadence may have ~1s jitter vs. the Node `setInterval`.
+- Embeddings, KB ingest, and chat all work the same as on the Node path.
+
 ## Architecture
 
 - pnpm workspaces monorepo (`apps/backend`, `apps/admin`, `apps/widget`, `packages/shared`).
