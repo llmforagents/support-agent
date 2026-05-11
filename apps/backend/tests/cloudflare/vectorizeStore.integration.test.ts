@@ -15,7 +15,7 @@ import { D1KnowledgeStore } from '../../src/infrastructure/adapters/cloudflare/d
 import { runD1Migrations } from '../../src/infrastructure/adapters/cloudflare/d1Migrations'
 import { InMemoryVectorize } from './mocks/inMemoryVectorize'
 import { ChunkId, SourceId } from '@support/shared'
-import type { ChunkInsert, SourceConfig } from '../../src/domain/source'
+import type { ChunkInsert, SourceConfig, SourceState } from '../../src/domain/source'
 
 const DIM = 1536
 
@@ -110,5 +110,135 @@ describe('VectorizeStore @integration', () => {
     const r = await store.upsertChunks([])
     expect(r.ok).toBe(true)
     expect(mock.size()).toBe(0)
+  })
+
+  // ── D2: search ──────────────────────────────────────────────────────────
+
+  async function createReadySource(name: string, gen = 1): Promise<string> {
+    const config: SourceConfig = { sourceType: 'txt', fileRef: `${name}.txt` }
+    const created = await knowledge.createSource({ name, sourceType: 'txt', config })
+    if (!created.ok) throw new Error('createSource failed')
+    const ready: SourceState = {
+      status: 'ready',
+      currentGeneration: gen,
+      ingestedAt: new Date(),
+      chunkCount: 0,
+    }
+    const upd = await knowledge.updateSourceState(created.value.id, ready)
+    if (!upd.ok) throw new Error('updateSourceState failed')
+    return created.value.id
+  }
+
+  it('search returns hits ordered by cosine score, with source name + text', async () => {
+    const sourceId = await createReadySource('Source A')
+    const chunk0 = makeChunk(sourceId, 0, axisVector(0))
+    const chunk1 = makeChunk(sourceId, 1, axisVector(1))
+    const ins = await store.upsertChunks([chunk0, chunk1])
+    expect(ins.ok).toBe(true)
+
+    const r = await store.search(axisVector(0), { topK: 10, minScore: 0 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    expect(r.value.length).toBeGreaterThanOrEqual(1)
+    const top = r.value[0]
+    expect(top).toBeDefined()
+    if (!top) return
+    expect(top.score).toBeGreaterThan(0.99)
+    expect(top.text).toBe(chunk0.text)
+    expect(top.sourceName).toBe('Source A')
+    expect(top.sourceId).toBe(sourceId)
+  })
+
+  it('search filters out stale-generation chunks', async () => {
+    // Source advances to generation 2; gen-1 chunks must not surface.
+    const sourceId = await createReadySource('Stale Source', 2)
+    const stale = makeChunk(sourceId, 0, axisVector(0), 1)
+    const current = makeChunk(sourceId, 1, axisVector(1), 2)
+    await store.upsertChunks([stale, current])
+
+    const r = await store.search(axisVector(0), { topK: 10, minScore: 0 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    const ids = r.value.map((h) => h.id)
+    expect(ids).not.toContain(stale.id)
+    expect(ids).toContain(current.id)
+  })
+
+  it('search excludes inactive sources', async () => {
+    const sourceId = await createReadySource('Inactive')
+    await store.upsertChunks([makeChunk(sourceId, 0, axisVector(0))])
+    const deact = await knowledge.setActive(SourceId(sourceId), false)
+    expect(deact.ok).toBe(true)
+
+    const r = await store.search(axisVector(0), { topK: 10, minScore: 0 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(0)
+  })
+
+  it('search excludes non-ready sources', async () => {
+    const config: SourceConfig = { sourceType: 'txt', fileRef: 'idle.txt' }
+    const created = await knowledge.createSource({ name: 'Idle', sourceType: 'txt', config })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+    const sourceId = created.value.id
+
+    // Leave state as { status: 'idle', currentGeneration: 0 } and upsert a chunk
+    // at generation 0 so a generation match alone would otherwise pass.
+    await store.upsertChunks([makeChunk(sourceId, 0, axisVector(0), 0)])
+
+    const r = await store.search(axisVector(0), { topK: 10, minScore: 0 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(0)
+  })
+
+  it('search respects minScore', async () => {
+    const sourceId = await createReadySource('Score Source')
+    const high = makeChunk(sourceId, 0, axisVector(0))
+    const low = makeChunk(sourceId, 1, axisVector(1))
+    await store.upsertChunks([high, low])
+
+    const r = await store.search(axisVector(0), { topK: 10, minScore: 0.5 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    const texts = r.value.map((h) => h.text)
+    expect(texts).toContain(high.text)
+    expect(texts).not.toContain(low.text)
+  })
+
+  it('search restricts results when activeSourceIds is set', async () => {
+    const a = await createReadySource('Source A')
+    const b = await createReadySource('Source B')
+    await store.upsertChunks([makeChunk(a, 0, axisVector(0)), makeChunk(b, 0, axisVector(0))])
+
+    const r = await store.search(axisVector(0), {
+      topK: 10,
+      minScore: 0,
+      activeSourceIds: [SourceId(a)],
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    expect(r.value).toHaveLength(1)
+    const hit = r.value[0]
+    expect(hit?.sourceId).toBe(a)
+    expect(hit?.sourceName).toBe('Source A')
+  })
+
+  it('search returns metadata stored on the chunk', async () => {
+    const sourceId = await createReadySource('Meta Source')
+    const meta = { page: 3, section: 'intro' }
+    await store.upsertChunks([makeChunk(sourceId, 0, axisVector(0), 1, meta)])
+
+    const r = await store.search(axisVector(0), { topK: 1, minScore: 0 })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    const hit = r.value[0]
+    expect(hit?.metadata).toEqual(meta)
   })
 })

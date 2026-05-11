@@ -9,9 +9,25 @@
 // All errors map to existing `infra_db_error` (no new error kinds added — per
 // the P4 plan). Vectorize-side failures are caught and reported the same way
 // as D1 failures so callers don't have to branch on which side blew up.
-import { Ok, Err, type Result, type AppError, type SourceId } from '@support/shared'
-import type { ChunkInsert, ChunkHit } from '../../../domain/source'
+import { Ok, Err, type Result, type AppError, type SourceId, ChunkId, SourceId as SourceIdBrand } from '@support/shared'
+import type { ChunkInsert, ChunkHit, SourceState } from '../../../domain/source'
 import type { VectorStorePort, SearchOpts } from '../../../application/ports'
+
+// Pull `topK` candidates from Vectorize and join in D1. We deliberately
+// over-fetch from Vectorize (topK * 4, capped at 100) because the
+// active/ready/generation filter happens in D1 — if all topK matches happen
+// to be stale, the user would get fewer hits than asked for. The over-fetch
+// is bounded to keep the IN(...) SQL fragment small.
+const VECTORIZE_OVERFETCH_MULTIPLIER = 4
+const VECTORIZE_OVERFETCH_MAX = 100
+
+function safeJsonParse<T>(raw: string, label: string): Result<T, AppError> {
+  try {
+    return Ok(JSON.parse(raw) as T)
+  } catch (err) {
+    return Err({ kind: 'infra_db_error', cause: `${label} json malformed: ${String(err)}` })
+  }
+}
 
 export class VectorizeStore implements VectorStorePort {
   constructor(
@@ -78,12 +94,96 @@ export class VectorizeStore implements VectorStorePort {
     )
   }
 
-  search(
-    _query: readonly number[],
-    _opts: SearchOpts,
+  async search(
+    query: readonly number[],
+    opts: SearchOpts,
   ): Promise<Result<readonly ChunkHit[], AppError>> {
-    // Implemented in D2.
-    return Promise.resolve(Err({ kind: 'infra_db_error', cause: 'search not implemented' }))
+    // 1) Ask Vectorize for candidates. Over-fetch so D1's active/ready/gen
+    //    filter doesn't starve the result set.
+    const fetchK = Math.min(
+      VECTORIZE_OVERFETCH_MAX,
+      Math.max(opts.topK, opts.topK * VECTORIZE_OVERFETCH_MULTIPLIER),
+    )
+    let vecRes: VectorizeMatches
+    try {
+      vecRes = await this.index.query([...query], { topK: fetchK, returnMetadata: true })
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+    if (vecRes.matches.length === 0) return Ok([])
+
+    // 2) Apply minScore early — saves a D1 round-trip if everything is
+    //    below threshold.
+    const aboveThreshold = vecRes.matches.filter((m) => m.score >= opts.minScore)
+    if (aboveThreshold.length === 0) return Ok([])
+
+    // 3) Join in D1 to recover text + metadata + source name + active flag +
+    //    current generation. The join filters: source.active = 1, state JSON
+    //    holds status='ready', and the chunk's ingest_generation matches the
+    //    source's current generation. activeSourceIds (if provided) further
+    //    restricts the result set.
+    const ids = aboveThreshold.map((m) => m.id)
+    const idPlaceholders = ids.map(() => '?').join(',')
+    const params: unknown[] = [...ids]
+    let sourceFilter = ''
+    if (opts.activeSourceIds && opts.activeSourceIds.length > 0) {
+      const srcPlaceholders = opts.activeSourceIds.map(() => '?').join(',')
+      sourceFilter = ` AND s.id IN (${srcPlaceholders})`
+      params.push(...opts.activeSourceIds)
+    }
+    type Row = {
+      id: string
+      source_id: string
+      source_name: string
+      text: string
+      metadata: string
+      ingest_generation: number
+      state: string
+      active: number
+    }
+    let rows: { results: Row[] }
+    try {
+      rows = await this.db
+        .prepare(
+          `SELECT c.id, c.source_id, c.text, c.metadata, c.ingest_generation,
+                  s.name AS source_name, s.state, s.active
+           FROM chunks c
+           JOIN sources s ON s.id = c.source_id
+           WHERE c.id IN (${idPlaceholders})
+             AND s.active = 1
+             ${sourceFilter}`,
+        )
+        .bind(...params)
+        .all<Row>()
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+
+    const rowById = new Map<string, Row>(rows.results.map((r) => [r.id, r]))
+
+    // 4) Re-build hits in the score order Vectorize returned, dropping any
+    //    that failed the D1-side filters. Limit to opts.topK at the end.
+    const hits: ChunkHit[] = []
+    for (const m of aboveThreshold) {
+      if (hits.length >= opts.topK) break
+      const row = rowById.get(m.id)
+      if (!row) continue
+      const stateRes = safeJsonParse<SourceState>(row.state, 'sources.state')
+      if (!stateRes.ok) return stateRes
+      if (stateRes.value.status !== 'ready') continue
+      if (row.ingest_generation !== stateRes.value.currentGeneration) continue
+      const metaRes = safeJsonParse<Record<string, unknown>>(row.metadata, 'chunks.metadata')
+      if (!metaRes.ok) return metaRes
+      hits.push({
+        id: ChunkId(row.id),
+        sourceId: SourceIdBrand(row.source_id),
+        sourceName: row.source_name,
+        text: row.text,
+        score: m.score,
+        metadata: metaRes.value,
+      })
+    }
+    return Ok(hits)
   }
 
   previewBySource(
