@@ -198,13 +198,24 @@ export const apiClient = {
   },
 
   // ── Admin config ────────────────────────────────────────────────────────────
-  configGet(): Promise<{ readonly adminOnline?: boolean; readonly onboardingCompleted?: boolean; readonly [k: string]: unknown }> {
+  configGet(): Promise<{
+    readonly adminOnline?: boolean
+    readonly onboardingCompleted?: boolean
+    readonly mcpEnabled?: boolean
+    readonly [k: string]: unknown
+  }> {
     return request('/config')
   },
   adminSetOnline(online: boolean): Promise<{ readonly ok: true }> {
     return request('/config/online', {
       method: 'PUT',
       body: JSON.stringify({ online }),
+    })
+  },
+  mcpSetEnabled(enabled: boolean): Promise<{ readonly mcpEnabled: boolean }> {
+    return request('/mcp', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
     })
   },
 
