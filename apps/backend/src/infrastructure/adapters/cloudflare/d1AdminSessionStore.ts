@@ -5,20 +5,15 @@
 //   `YYYY-MM-DD HH:MM:SS` (UTC, space separator, no milliseconds, no Z).
 //   `created_at` defaults to `datetime('now')`; `expires_at` is written via
 //   `toSqliteDatetime(date)`. Reads parse back to JS `Date` with
-//   `parseSqliteDatetime`.
-//
-//   Why pick that format consistently: the `deleteExpired` sweep compares
-//   `expires_at <= datetime('now')`. SQLite compares TEXT lexicographically,
-//   so both sides MUST share the same format for the compare to behave like
-//   a temporal compare. Mixing ISO-8601-Z and SQLite-format strings would
-//   work today by luck (the prefixes happen to sort right) and break the
-//   moment one side gains/loses a fractional component or a trailing 'Z'.
+//   `parseSqliteDatetime` (both helpers live in `./dateUtils.ts` so every
+//   D1 adapter shares one format).
 //
 // Errors map to `infra_db_error` to mirror PgAdminSessionStore — no new
 // error kinds are introduced.
 import { randomUUID } from 'node:crypto'
 import { Ok, Err, type Result, AdminId, type AppError } from '@support/shared'
 import type { AdminSessionRow, AdminSessionStorePort } from '../../../application/ports'
+import { toSqliteDatetime, parseSqliteDatetime } from './dateUtils'
 
 type Row = Readonly<{
   id: string
@@ -26,16 +21,6 @@ type Row = Readonly<{
   expires_at: string
   created_at: string
 }>
-
-function toSqliteDatetime(d: Date): string {
-  // 'YYYY-MM-DDTHH:mm:ss.sssZ' -> 'YYYY-MM-DD HH:mm:ss'
-  return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '')
-}
-
-function parseSqliteDatetime(s: string): Date {
-  // SQLite returns 'YYYY-MM-DD HH:MM:SS' (UTC). Re-hydrate to a JS Date.
-  return new Date(`${s.replace(' ', 'T')}Z`)
-}
 
 function rowToAdminSession(r: Row): AdminSessionRow {
   return {
