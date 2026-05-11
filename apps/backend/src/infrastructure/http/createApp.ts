@@ -6,6 +6,7 @@ import type { Container } from '../../composition/container'
 import { requestId } from './middleware/requestId'
 import { requestLogger } from './middleware/requestLogger'
 import { errorHandler } from './middleware/errorHandler'
+import { metricsMiddleware } from './middleware/metricsMiddleware'
 import { widgetCors, adminCors } from './middleware/cors'
 import { csrf } from './middleware/csrf'
 import { healthRoutes } from './routes/health'
@@ -27,6 +28,7 @@ export function createApp(c: Container): Hono {
   const app = new Hono()
   app.use('*', requestId())
   app.use('*', requestLogger(c.logger))
+  app.use('*', metricsMiddleware(c))
   app.use('*', errorHandler())
   app.use('*', secureHeaders({
     contentSecurityPolicy: {
