@@ -43,8 +43,6 @@ pnpm --filter e2e report
 
 ## Specs
 
-Specs land in D3-D5. The intended scope per file:
-
 | File | Scope |
 |---|---|
 | `widgetHappyPath.spec.ts` | visitor chat round-trip |
@@ -55,6 +53,21 @@ Specs land in D3-D5. The intended scope per file:
 | `adminA11y.spec.ts` | axe AA scan of admin |
 
 Tests are sequential (`workers: 1`) because they share a single backend and Postgres.
+
+## Environment flags
+
+The suite reads a few env vars to make CI runs predictable when the
+upstream LLM proxy is not configured:
+
+| Var | Effect |
+|---|---|
+| `BACKEND_URL` | Backend base URL. Defaults to `http://localhost:3001`. |
+| `ADMIN_URL` | Admin SPA base URL. Defaults to `http://localhost:5173`. |
+| `E2E_SKIP_LLM=1` | Skip assertions that depend on the AI actually answering. The visitor round-trip still runs; the assistant-reply and handoff-detection assertions are suppressed. `adminInbox.spec.ts` skips entirely because the whole flow depends on the AI escalating. |
+| `E2E_SKIP_ONBOARDING=1` | Skip `adminOnboarding.spec.ts` unconditionally. The spec also self-skips when an admin already exists (the wizard becomes inaccessible in that case). |
+
+To exercise `adminOnboarding.spec.ts` against the real wizard you need a
+virgin DB — see "DB reset between suites" below.
 
 ## DB reset between suites
 
