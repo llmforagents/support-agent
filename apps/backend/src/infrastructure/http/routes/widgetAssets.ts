@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { readFile } from 'node:fs/promises'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const WIDGET_DIST = join(here, '../../../../../widget/dist')

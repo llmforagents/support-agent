@@ -15,7 +15,7 @@ import { hashPassword } from '../../src/infrastructure/crypto/passwordHash'
 import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
 import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
-import type { Container } from '../../src/composition/composeContainer'
+import type { Container } from '../../src/composition/container'
 import pino from 'pino'
 import { SessionId } from '@support/shared'
 
@@ -47,6 +47,7 @@ describe('chat flow @integration', () => {
     const sessionStore = new PgSessionStore(pg.pool)
     const broadcast = new InProcessSseHub()
     const container: Container = {
+      driver: 'postgres' as const,
       env,
       adminStore: new PgAdminStore(pg.pool),
       adminSessionStore: new PgAdminSessionStore(pg.pool),

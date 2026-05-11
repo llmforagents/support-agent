@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { SSE_HEARTBEAT_MS } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import type { BroadcastEvent } from '../../../application/ports'
 import { requireAdmin } from '../middleware/requireAdmin'
 

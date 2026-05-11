@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type { Hono } from 'hono'
 import pino from 'pino'
 import { createApp } from '../../src/infrastructure/http/createApp'
-import type { Container } from '../../src/composition/composeContainer'
+import type { Container } from '../../src/composition/container'
 import { MemoryAdminStore } from '../../src/infrastructure/adapters/memory/memoryAdminStore'
 import { MemoryAdminSessionStore } from '../../src/infrastructure/adapters/memory/memoryAdminSessionStore'
 import { MemorySiteConfigStore } from '../../src/infrastructure/adapters/memory/memorySiteConfigStore'
@@ -43,6 +43,7 @@ export function buildTestApp(): { app: Hono; container: Container } {
   } as never
 
   const container: Container = {
+    driver: 'postgres' as const,
     env, adminStore, adminSessionStore, siteConfigStore, broadcast,
     sessionStore, llm: null as never, logger: silentLogger, sha256,
     knowledgeStore, vectorStore, fileStore, embedder,

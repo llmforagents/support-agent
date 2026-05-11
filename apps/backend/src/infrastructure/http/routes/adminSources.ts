@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { SourceId } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import type { SourceConfig } from '../../../domain/source'
 import { ingestSource } from '../../../application/kb/ingestSource'
 import { extractChunks } from '../../parsers'

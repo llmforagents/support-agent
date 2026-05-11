@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { SessionId, MAX_VISITOR_MESSAGE_LEN } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import { claimHandoff } from '../../../application/operator/claimHandoff'
 import { sendOperatorMessage } from '../../../application/operator/sendOperatorMessage'
 import { releaseSession } from '../../../application/operator/releaseSession'

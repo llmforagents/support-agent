@@ -3,7 +3,7 @@ import { setCookie, deleteCookie, getCookie } from 'hono/cookie'
 import {
   CreateFirstAdminSchema, LoginSchema, ADMIN_SESSION_TTL_MS, ADMIN_LOGIN_RATE_LIMIT_PER_HOUR,
 } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import type { Context } from 'hono'
 import { createFirstAdmin } from '../../../application/auth/createFirstAdmin'
 import { login as loginOrch } from '../../../application/auth/login'

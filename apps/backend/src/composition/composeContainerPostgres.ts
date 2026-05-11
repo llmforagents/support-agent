@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { Env } from '@support/shared'
-import type {
-  AdminStorePort, AdminSessionStorePort, SiteConfigStorePort, SessionStorePort,
-  BroadcastPort, LlmPort, KnowledgeStorePort, VectorStorePort, FileStorePort, EmbedderPort,
-  MysqlConnectionStorePort,
-} from '../application/ports'
+import type { Container } from './container'
 import { createPool, pingPool } from '../infrastructure/adapters/postgres/pool'
 import { runMigrations } from '../infrastructure/adapters/postgres/runMigrations'
 import { PgAdminStore } from '../infrastructure/adapters/postgres/pgAdminStore'
@@ -20,29 +16,7 @@ import { HandoffTimeoutScheduler } from '../infrastructure/sse/handoffTimeoutSch
 import { Llm4AgentsLlmAdapter } from '../infrastructure/adapters/llm4agents/llmAdapter'
 import { PgMysqlConnectionStore } from '../infrastructure/adapters/postgres/pgMysqlConnectionStore'
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
-import { createLogger, type Logger } from '../infrastructure/observability/logger'
-
-export type Container = Readonly<{
-  env: Env
-  adminStore: AdminStorePort
-  adminSessionStore: AdminSessionStorePort
-  siteConfigStore: SiteConfigStorePort
-  sessionStore: SessionStorePort
-  broadcast: BroadcastPort
-  llm: LlmPort
-  knowledgeStore: KnowledgeStorePort
-  vectorStore: VectorStorePort
-  fileStore: FileStorePort
-  embedder: EmbedderPort
-  mysqlConnectionStore: MysqlConnectionStorePort
-  handoffTimeoutScheduler: HandoffTimeoutScheduler
-  sha256: (s: string) => string
-  encrypt: (plaintext: string) => string
-  decrypt: (envelope: string) => string
-  logger: Logger
-  healthChecks: Readonly<{ db: () => Promise<boolean>; llm: () => Promise<boolean> }>
-  shutdown: () => Promise<void>
-}>
+import { createLogger } from '../infrastructure/observability/logger'
 
 async function pingLlm(apiBase: string): Promise<boolean> {
   try {
@@ -51,9 +25,9 @@ async function pingLlm(apiBase: string): Promise<boolean> {
   } catch { return false }
 }
 
-export async function composeContainer(env: Env): Promise<Container> {
+export async function composeContainerPostgres(env: Env): Promise<Container> {
   if (env.STORAGE_DRIVER !== 'postgres') {
-    throw new Error(`STORAGE_DRIVER=${env.STORAGE_DRIVER} not supported in P1 — postgres only`)
+    throw new Error(`STORAGE_DRIVER=${env.STORAGE_DRIVER} not supported by composeContainerPostgres — postgres only`)
   }
   if (!env.POSTGRES_URL) throw new Error('POSTGRES_URL required for postgres driver')
 
@@ -71,6 +45,7 @@ export async function composeContainer(env: Env): Promise<Container> {
   handoffTimeoutScheduler.start()
 
   return {
+    driver: 'postgres' as const,
     env,
     adminStore: new PgAdminStore(pool),
     adminSessionStore: new PgAdminSessionStore(pool),

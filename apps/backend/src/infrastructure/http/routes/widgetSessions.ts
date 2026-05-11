@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { CreateSessionSchema, PostMessageSchema, VisitorId, SessionId, VISITOR_RATE_LIMIT_MSG_PER_MIN, VISITOR_RATE_LIMIT_MSG_PER_HOUR } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import type { Session } from '../../../domain/conversation'
 import { handleVisitorMessage } from '../../../application/chat/handleVisitorMessage'
 import { signStreamToken } from '../../crypto/streamToken'

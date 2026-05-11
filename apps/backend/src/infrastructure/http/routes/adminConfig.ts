@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import { requireAdmin } from '../middleware/requireAdmin'
 
 export function adminConfigRoutes(c: Container): Hono {

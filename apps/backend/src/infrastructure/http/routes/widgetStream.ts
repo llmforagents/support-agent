@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { SessionId, VisitorId, SSE_HEARTBEAT_MS } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import { verifyStreamToken } from '../../crypto/streamToken'
 import type { BroadcastEvent } from '../../../application/ports'
 

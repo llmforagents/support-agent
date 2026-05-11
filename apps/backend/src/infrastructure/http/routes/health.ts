@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 
 export function healthRoutes(c: Container): Hono {
   const app = new Hono()

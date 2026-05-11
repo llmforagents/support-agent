@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import { requireAdmin } from '../middleware/requireAdmin'
 import { AppHttpError } from '../middleware/errorHandler'
 import { validateSelectQuery } from '../../parsers/sqlSafety'

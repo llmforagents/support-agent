@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { CompleteOnboardingSchema } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import { completeOnboarding } from '../../../application/onboarding/completeOnboarding'
 import { requireAdmin } from '../middleware/requireAdmin'
 import { AppHttpError } from '../middleware/errorHandler'

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { SessionId, MessageId } from '@support/shared'
-import type { Container } from '../../../composition/composeContainer'
+import type { Container } from '../../../composition/container'
 import { requireAdmin } from '../middleware/requireAdmin'
 import { AppHttpError } from '../middleware/errorHandler'
 import type { ConversationState } from '../../../domain/conversation'
