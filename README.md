@@ -73,6 +73,16 @@ cd apps/backend && pnpm dlx wrangler deploy
 - The handoff timeout runs as a Durable Object alarm, so the cadence may have ~1s jitter vs. the Node `setInterval`.
 - Embeddings, KB ingest, and chat all work the same as on the Node path.
 
+## MCP integration
+
+The agent can call external tools exposed via the [Model Context Protocol](https://modelcontextprotocol.io) — web search, scraping, image generation, and similar — when the toggle is on. Tools are sourced from the configured `llm4agents` proxy; the SDK handles enumeration and execution, so no extra plumbing is required on the support backend.
+
+Enable it from **Admin → Configuración → Acceso al MCP**. The switch is **off by default**, asks for confirmation before changing, persists in `site_config.mcp_enabled`, and takes effect on the next visitor message.
+
+**Cost.** MCP tool calls run upstream against the same `llm4agents` API key the chat agent already uses, so tool usage is billed by `llm4agents` per its pricing. Verify your plan supports MCP before enabling.
+
+**Roadmap.** v0.5.0 ships a single global toggle. Per-tool allowlists (e.g. "enable search but not image generation") are planned for a future release.
+
 ## Architecture
 
 - pnpm workspaces monorepo (`apps/backend`, `apps/admin`, `apps/widget`, `packages/shared`).
