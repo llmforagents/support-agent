@@ -9,5 +9,7 @@ declare module 'cloudflare:test' {
     DB: D1Database
     FILES: R2Bucket
     VEC: VectorizeIndex
+    HUB: DurableObjectNamespace
+    HANDOFF_TIMER: DurableObjectNamespace
   }
 }
