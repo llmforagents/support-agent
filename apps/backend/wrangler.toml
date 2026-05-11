@@ -1,0 +1,42 @@
+# apps/backend/wrangler.toml
+name = "support-llm4agents"
+main = "src/worker.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+STORAGE_DRIVER = "cloudflare"
+NODE_ENV = "production"
+LOG_LEVEL = "info"
+COOKIE_SECURE = "true"
+CF_D1_BINDING = "DB"
+CF_VECTORIZE_BINDING = "VEC"
+CF_R2_BINDING = "FILES"
+CF_DURABLE_OBJECT_BINDING = "HUB"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "support-llm4agents"
+database_id = "REPLACE_ME"
+migrations_dir = "migrations-d1"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "support-llm4agents-files"
+
+[[vectorize]]
+binding = "VEC"
+index_name = "support-llm4agents-chunks"
+
+[durable_objects]
+bindings = [
+  { name = "HUB", class_name = "BroadcastHubDurableObject" },
+  { name = "HANDOFF_TIMER", class_name = "HandoffTimeoutDurableObject" },
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BroadcastHubDurableObject", "HandoffTimeoutDurableObject"]
+
+[triggers]
+crons = []  # No crons in P4; reserved for future scheduled sweeps
