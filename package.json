@@ -17,7 +17,8 @@
     "audit": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm build && pnpm test:integration && pnpm --filter backend run test:cf && pnpm --filter backend run build:cf",
     "dev:backend": "pnpm --filter backend dev",
     "dev:admin": "pnpm --filter admin dev",
-    "dev:widget": "pnpm --filter widget dev"
+    "dev:widget": "pnpm --filter widget dev",
+    "test:e2e": "pnpm --filter e2e run test"
   },
   "packageManager": "pnpm@9.12.0",
   "pnpm": {
