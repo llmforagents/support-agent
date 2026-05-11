@@ -44,6 +44,22 @@ export async function loadFixture(): Promise<SeedFixture> {
   return parsed
 }
 
+/**
+ * Synchronous accessor for the default committed fixture, useful for specs
+ * that need the email/password in a `test()` body without awaiting. The
+ * shape mirrors `e2e/fixtures/seed.json` and must stay in sync with it.
+ */
+export const DEFAULT_FIXTURE: SeedFixture = {
+  admin: { email: 'admin@e2e.test', password: 'e2e-test-pw-1234' },
+  onboarding: {
+    siteName: 'E2E Acme',
+    primaryColor: '#0066ff',
+    llm4agentsApiKey: 'sk-proxy-e2e-test-0000000000',
+    agentModel: 'gpt-4o-mini',
+    systemPrompt: 'Sos un agente de soporte amable y conciso. Respondé en castellano.',
+  },
+} as const
+
 function findCookie(setCookieHeaders: readonly string[], name: string): string | null {
   for (const header of setCookieHeaders) {
     const parts = header.split(';')[0]

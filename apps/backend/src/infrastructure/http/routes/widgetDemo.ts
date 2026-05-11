@@ -31,9 +31,15 @@ export function widgetDemoRoutes(c: Container): Hono {
     const cfg = await c.siteConfigStore.get()
     const siteKey = cfg.ok && cfg.value ? cfg.value.siteKey : null
     const apiBase = c.env.PUBLIC_API_URL
+    // The widget bootstrap reads `window.__SITE_KEY__` (set by /embed/:siteKey
+    // in production via the iframe), so for the demo page we inline a small
+    // bootstrap that sets the global before loading the widget bundle. The
+    // value is JSON-stringified to make the inline script XSS-safe even if a
+    // future siteKey contains characters outside the current alnum regex.
     const scriptTag = siteKey === null
       ? `<p role="alert">No hay un sitio configurado todavía. Completá el onboarding desde el admin antes de cargar este demo.</p>`
-      : `<script src="${escapeHtml(apiBase)}/widget.js" data-site-key="${escapeHtml(siteKey)}" async></script>`
+      : `<script>window.__SITE_KEY__=${JSON.stringify(siteKey)};window.__WIDGET_BASE_URL__=${JSON.stringify(apiBase)};</script>
+    <script src="${escapeHtml(apiBase)}/widget.js" async></script>`
     const html = `<!doctype html>
 <html lang="es">
 <head>
