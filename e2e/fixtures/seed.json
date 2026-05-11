@@ -1,0 +1,13 @@
+{
+  "admin": {
+    "email": "admin@e2e.test",
+    "password": "e2e-test-pw-1234"
+  },
+  "onboarding": {
+    "siteName": "E2E Acme",
+    "primaryColor": "#0066ff",
+    "llm4agentsApiKey": "sk-proxy-e2e-test-0000000000",
+    "agentModel": "gpt-4o-mini",
+    "systemPrompt": "Sos un agente de soporte amable y conciso. Respondé en castellano."
+  }
+}

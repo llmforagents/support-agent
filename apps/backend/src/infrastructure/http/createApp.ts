@@ -22,6 +22,7 @@ import { widgetConfigRoutes } from './routes/widgetConfig'
 import { widgetSessionRoutes } from './routes/widgetSessions'
 import { widgetStreamRoutes } from './routes/widgetStream'
 import { widgetAssetRoutes } from './routes/widgetAssets'
+import { widgetDemoRoutes } from './routes/widgetDemo'
 import { operatorRoutes } from './routes/operator'
 import { adminInboxRoutes } from './routes/adminInbox'
 
@@ -70,6 +71,10 @@ export function createApp(c: Container): Hono {
   // simply aren't registered when the driver is `cloudflare`.
   if (c.driver === 'postgres') {
     app.route('/', widgetAssetRoutes(c))
+    // Minimal HTML demo page for the E2E suite. Postgres-only because the
+    // /widget.js bundle it references is itself Node-disk-only.
+    app.route('/widget-demo.html', widgetDemoRoutes(c))
+    app.route('/widget-demo', widgetDemoRoutes(c))
   }
   app.route('/v1/widget/config', widgetConfigRoutes(c))
   app.route('/v1/widget/sessions', widgetSessionRoutes(c))
