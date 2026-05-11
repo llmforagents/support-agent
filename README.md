@@ -1,29 +1,32 @@
 # support-llm4agents
 
-[![CI](https://github.com/<your-org>/support-llm4agents/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/support-llm4agents/actions/workflows/ci.yml)
+[![CI](https://github.com/llmforagents/support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/llmforagents/support-agent/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](.nvmrc)
+[![Release](https://img.shields.io/github/v/tag/llmforagents/support-agent?sort=semver&label=release)](https://github.com/llmforagents/support-agent/releases)
 
-Open-source AI support agent for any website. Drop-in floating chat widget powered by your llm4agents account, with knowledge-base RAG (P2), human handoff (P3), and a clean admin dashboard.
+Open-source AI support agent for any website. Drop-in floating chat widget powered by your llm4agents account, with knowledge-base RAG, MySQL ingest, human handoff, and a WCAG AA admin dashboard. Two deployment paths: self-host on Node + Postgres, or ship to Cloudflare Workers (D1 + Vectorize + R2 + Durable Objects).
 
-> **Status:** Phase 1 (`v0.1.0`) — chat widget + admin onboarding + AI replies via llm4agents SDK. Knowledge base, MySQL ingestion, and human handoff land in P2/P3.
+> **Status:** `v0.5.2` — production-ready. **481 automated tests** + 6 Playwright E2E specs. **0 known vulnerabilities**. Cloudflare bundle 3.4 MB gzip (well under the 10 MB Workers limit).
 
 > **⚠ Production deployment:** the default `docker-compose.yml` is for local development. Before exposing to the internet, follow [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) to put a TLS-terminating reverse proxy in front. Never expose the backend on plain HTTP.
 
-## What's in v0.1.0
+## Features
 
-- Floating chat widget (Tawk-style, friendly indigo theme).
-- One-step embed: paste a `<script>` tag on your site.
-- Admin dashboard at `/admin/conversations` (3-column inbox layout).
-- Onboarding wizard creates the admin user, configures the site, and stores the llm4agents API key encrypted.
-- AI streams replies via the `@llmforagents/sdk` (chat + embeddings).
-- Single-tenant: one install = one website = one admin.
+- **Floating chat widget** — Preact 10, dual-build (shadow DOM bootstrap + iframe), Tawk-style trigger, WCAG AA compliant (ARIA roles, focus management, keyboard nav, `prefers-reduced-motion`).
+- **One-step embed** — `<script src="https://your-domain/widget.js" data-site-key="...">` before `</body>`.
+- **Knowledge-base RAG** — ingest PDF / Markdown / TXT files and MySQL `SELECT` queries (with AST-validated SQL safety). Embeddings + cosine search via pgvector (Postgres) or Cloudflare Vectorize. Idempotent re-ingest via a generation counter; orphan chunks are filtered out at query time.
+- **Human handoff** — the AI invokes a `request_human_handoff` tool when escalation is appropriate; admin "online" toggle gates whether the tool is exposed. A 90-second timeout reverts unclaimed handoffs back to AI. Operator UX with claim / release / close, atomic CAS to guard against AI-vs-operator races.
+- **Admin dashboard** — 3-column inbox, onboarding wizard, KB sources management (upload, reindex, preview chunks), MySQL connection manager, operator composer. React 19 + Vite 6 + Tailwind 4 + TanStack Query. Spanish UI primary; English secondary.
+- **Prometheus metrics** — `/metrics` endpoint (Postgres) or Analytics Engine dataset (Cloudflare). 11 instrumented metric series covering HTTP, chat, LLM cost, ingest lifecycle, and handoff timeouts.
+- **Two deployment targets, one codebase** — `STORAGE_DRIVER=postgres` (default) or `STORAGE_DRIVER=cloudflare`. Selected at composition time; application code is identical between targets.
+- **Single-tenant** — one install = one website = one admin. Multi-tenant is out of scope.
 
 ## Quick start (local)
 
 ```bash
-git clone https://github.com/<your-org>/support-llm4agents
-cd support-llm4agents
+git clone https://github.com/llmforagents/support-agent
+cd support-agent
 node scripts/init-env.mjs                   # generates .env with strong secrets
 docker compose -f docker/docker-compose.yml up -d
 ```
@@ -31,6 +34,8 @@ docker compose -f docker/docker-compose.yml up -d
 - Admin: http://localhost:3000 (complete the onboarding wizard)
 - Backend: http://localhost:3001
 - Postgres: 127.0.0.1:5432 (loopback only)
+
+You'll need an `llm4agents` API key (format `sk-proxy-...`) to finish onboarding. The wizard creates the admin, configures the site, and stores the key encrypted with AES-256-GCM (the encryption key comes from `.env`).
 
 After onboarding, paste the snippet shown on the last step into your website's HTML, before `</body>`:
 
@@ -42,7 +47,7 @@ For production deployments with TLS, see [`docs/operations/self-hosting.md`](doc
 
 ## Deploy to Cloudflare
 
-This project ships with a Workers-compatible build that uses D1, R2, Vectorize, and Durable Objects in place of Postgres + pgvector + local files + in-process pubsub.
+This project ships with a Workers-compatible build that uses D1, R2, Vectorize, and Durable Objects in place of Postgres + pgvector + local files + in-process pubsub. Same routes, same admin UI, same widget — different storage layer wired in by `composeContainerCloudflare.ts`.
 
 ```bash
 # 1. Install wrangler if you don't have it
@@ -98,10 +103,10 @@ Default histogram buckets target sub-second web latencies (5 ms → 10 s).
 
 ## Architecture
 
-- pnpm workspaces monorepo (`apps/backend`, `apps/admin`, `apps/widget`, `packages/shared`).
-- Backend: Hono + Postgres (default driver). Cloudflare adapter (D1 + Vectorize + R2) lands in P4.
-- Clean Architecture: domain → application → infrastructure → presentation per app.
-- Ports & Adapters (Pattern 11): every external dependency goes through an interface.
+- **Monorepo** — pnpm 9 workspaces: `apps/backend` (Hono 4), `apps/admin` (React 19 + Vite 6), `apps/widget` (Preact 10 + Vite, dual-build), `packages/shared` (branded types + Zod schemas + Result type + env loader), `e2e` (Playwright 1.59 + axe-core 4.11).
+- **Clean Architecture in the backend** — `domain → application → infrastructure → presentation`. All external dependencies are behind a Port interface (see `apps/backend/src/application/ports.ts`); adapters live under `infrastructure/adapters/{postgres,cloudflare,filesystem,memory,llm4agents}`.
+- **Dual driver** — Postgres + pgvector + local files + in-process pubsub **OR** Cloudflare D1 + Vectorize + R2 + Durable Objects. Selected via the `STORAGE_DRIVER` env at composition time. Two composition roots: `composeContainerPostgres.ts` (mounted by `src/server.ts`) and `composeContainerCloudflare.ts` (mounted by `src/worker.ts`). Application code is identical across drivers.
+- **TypeScript strict everywhere** — `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, branded types for domain IDs (`SessionId`, `AdminId`, `ChunkId`, `UsdCents`, ...), `Result<T, E>` for fallible operations, ESLint `--max-warnings 0` across all packages.
 
 ## Development
 
@@ -110,28 +115,50 @@ pnpm install
 pnpm dev:backend      # http://localhost:3001
 pnpm dev:admin        # http://localhost:3000 (proxies /v1 → backend)
 pnpm dev:widget       # http://localhost:3002 (preview iframe)
-pnpm audit            # typecheck + lint + test:ci + build + test:integration
+pnpm dev:test         # all three concurrently — used by Playwright
+
+pnpm typecheck                          # all workspaces
+pnpm lint                               # eslint --max-warnings 0
+pnpm test:ci                            # unit tests (Node pool)
+pnpm test:integration                   # Postgres integration via testcontainers
+pnpm --filter backend run test:cf       # Cloudflare integration via vitest-pool-workers
+pnpm --filter backend run build:cf      # wrangler dry-run validates the Workers bundle
+pnpm audit                              # full chain (no e2e — see below)
 ```
 
-Integration tests use `@testcontainers/postgresql` — Docker is required.
+**End-to-end (Playwright + axe-core)** — see [`e2e/README.md`](e2e/README.md). Runs against a live local stack (Postgres + dev servers); requires `pnpm --filter e2e run install-browsers` once. Not part of `pnpm audit` (user-driven by design).
+
+Test counts at `v0.5.2`:
+
+| Pool | Tests |
+|---|---|
+| Unit (Node) — backend / shared / admin / widget | 332 + 25 + 13 + 15 = **385** |
+| Postgres integration (`testcontainers-postgresql`) | **46** |
+| Cloudflare integration (`@cloudflare/vitest-pool-workers`) | **59** |
+| Playwright E2E (user-driven) | **6 specs** |
 
 ## Documentation
 
 - [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) — Production deployment with TLS.
 - [`docs/operations/backup.md`](docs/operations/backup.md) — Backup & restore.
 - [`docs/operations/secrets.md`](docs/operations/secrets.md) — Secret management & rotation.
+- [`docs/operations/github-bootstrap.md`](docs/operations/github-bootstrap.md) — Repo + CI bootstrap.
+- [`e2e/README.md`](e2e/README.md) — Running the Playwright + axe-core E2E suite.
+- [`apps/widget/README.md`](apps/widget/README.md) — Widget build variants + a11y caveat.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Development setup, branch & commit conventions.
 - [`SECURITY.md`](.github/SECURITY.md) — Security disclosure.
 
-## Roadmap
+## Release history
 
-- **P1 (v0.1.0)** ✅ Skeleton + chat without RAG.
-- **P2 (v0.2.0)** ✅ Knowledge base: PDF/md/txt ingestion + embeddings + RAG retrieval.
-- **P3 (v0.3.0)** ✅ MySQL source + auto-handoff + operator mode.
-- **P4 (v0.4.0)** ✅ Cloudflare adapters (D1 + Vectorize + R2 + Durable Objects).
-- **P5 (v0.5.0)** ✅ Prometheus metrics + WCAG AA pass + Playwright E2E suite.
-- **P5.1 (v0.5.1)** ✅ Remove the MCP toggle — web support is covered by RAG + MySQL ingest + human handoff; MCP added cost-control surface area we don't want to maintain.
+- **`v0.1.0`** ✅ Skeleton + chat without RAG. Backend skeleton, admin onboarding wizard, widget embed, AI replies via `@llmforagents/sdk`.
+- **`v0.2.0`** ✅ Knowledge base: PDF / Markdown / TXT ingestion + embeddings + RAG retrieval with cosine similarity over pgvector.
+- **`v0.3.0`** ✅ MySQL source (AST-validated SELECT queries, auto-LIMIT, denied-keyword filter) + auto-handoff via LLM tool + operator mode (claim / release / close, 90s timeout revert).
+- **`v0.3.1`** ✅ Atomic CAS for AI-triggered handoff race (operator vs AI) + observability cleanup (pino logger in boot path).
+- **`v0.4.0`** ✅ Cloudflare adapters: D1 + Vectorize + R2 + Durable Objects. Dual-driver via `STORAGE_DRIVER` env. `encryption.ts` ported to Web Crypto so it runs unchanged on both runtimes.
+- **`v0.5.0`** ✅ Prometheus metrics (Postgres `/metrics` + Cloudflare Analytics Engine) + WCAG AA pass (widget + admin) + Playwright E2E suite (6 specs).
+- **`v0.5.1`** ✅ Remove the MCP toggle — web support is covered by RAG + MySQL ingest + human handoff; MCP added cost-control surface area we don't want to maintain.
+- **`v0.5.2`** ✅ Relicense from MIT to Apache 2.0 (adds explicit patent grant + NOTICE preservation per §4(d)).
 
 ## License
 
-Apache 2.0 — see LICENSE and NOTICE.
+Apache 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
