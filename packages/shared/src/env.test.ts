@@ -38,4 +38,40 @@ describe('loadEnv', () => {
     expect(env.METRICS_ENABLED).toBe(true)
     expect(env.PORT).toBe(8080)
   })
+
+  it('defaults STORAGE_DRIVER to postgres', () => {
+    const { STORAGE_DRIVER: _omit, ...rest } = VALID
+    const env = loadEnv(rest)
+    expect(env.STORAGE_DRIVER).toBe('postgres')
+  })
+
+  it('accepts STORAGE_DRIVER=cloudflare when all CF_* bindings are present', () => {
+    const env = loadEnv({
+      ...VALID,
+      STORAGE_DRIVER: 'cloudflare',
+      CF_D1_BINDING: 'DB',
+      CF_VECTORIZE_BINDING: 'VEC',
+      CF_R2_BINDING: 'FILES',
+      CF_DURABLE_OBJECT_BINDING: 'HUB',
+    })
+    expect(env.STORAGE_DRIVER).toBe('cloudflare')
+    expect(env.CF_D1_BINDING).toBe('DB')
+  })
+
+  it('rejects STORAGE_DRIVER=cloudflare with missing CF_R2_BINDING', () => {
+    expect(() =>
+      loadEnv({
+        ...VALID,
+        STORAGE_DRIVER: 'cloudflare',
+        CF_D1_BINDING: 'DB',
+        CF_VECTORIZE_BINDING: 'VEC',
+        CF_DURABLE_OBJECT_BINDING: 'HUB',
+      }),
+    ).toThrow(/CF_R2_BINDING/)
+  })
+
+  it('rejects STORAGE_DRIVER=postgres without POSTGRES_URL', () => {
+    const { POSTGRES_URL: _omit, ...rest } = VALID
+    expect(() => loadEnv(rest)).toThrow(/POSTGRES_URL/)
+  })
 })
