@@ -64,6 +64,7 @@ export function widgetSessionRoutes(c: Container): Hono {
         embedder: c.embedder,
         vectorStore: c.vectorStore,
         decrypt: c.decrypt,
+        metrics: c.metrics,
       },
       { sessionId, content: body.content },
     )

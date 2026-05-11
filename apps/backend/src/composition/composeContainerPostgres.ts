@@ -43,9 +43,11 @@ export async function composeContainerPostgres(env: Env): Promise<Container> {
 
   const sessionStore = new PgSessionStore(pool)
   const broadcast = new InProcessSseHub(logger)
-  const handoffTimeoutScheduler = new HandoffTimeoutScheduler(sessionStore, broadcast, logger)
-  handoffTimeoutScheduler.start()
   const metrics = new PromClientMetrics()
+  // POLL_INTERVAL_MS lives in the scheduler module as a private default; pass
+  // `undefined` to keep that default and still slot metrics in as the 5th arg.
+  const handoffTimeoutScheduler = new HandoffTimeoutScheduler(sessionStore, broadcast, logger, undefined, metrics)
+  handoffTimeoutScheduler.start()
 
   return {
     driver: 'postgres' as const,

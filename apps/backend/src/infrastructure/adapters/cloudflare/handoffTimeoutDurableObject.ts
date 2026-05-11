@@ -28,11 +28,18 @@
 // Replaces `HandoffTimeoutScheduler` for the Cloudflare deployment.
 import { DurableObject } from 'cloudflare:workers'
 import { toSqliteDatetime } from './dateUtils'
+import { AnalyticsEngineMetrics } from '../../observability/metricsCloudflare'
+import { noopMetrics, type MetricsPort } from '../../observability/metrics'
 
 const POLL_INTERVAL_MS = 15_000
 const HANDOFF_TIMEOUT_MS = 90_000
 
-type Bindings = Readonly<{ DB: D1Database }>
+// METRICS is optional so local `wrangler dev` without the Analytics Engine
+// binding (and vitest-pool-workers, which has no AE pool) keeps working —
+// the DO falls back to `noopMetrics` when the binding is absent. The CF
+// runtime hands all worker bindings to DOs via `env` by default, so adding
+// the field here is sufficient; no extra wrangler.toml entry is required.
+type Bindings = Readonly<{ DB: D1Database; METRICS?: AnalyticsEngineDataset }>
 
 export class HandoffTimeoutDurableObject extends DurableObject<Bindings> {
   override async fetch(req: Request): Promise<Response> {
@@ -57,12 +64,13 @@ export class HandoffTimeoutDurableObject extends DurableObject<Bindings> {
       .bind(cutoff)
       .all<{ id: string }>()
 
+    let reverted = 0
     for (const row of rows.results) {
       const nextState = JSON.stringify({ status: 'active_ai' })
       // CAS revert — `WHERE status_kind = 'handoff_requested'` ensures an
       // operator who claimed the session in between the SELECT and the
       // UPDATE wins the race.
-      await this.env.DB.prepare(
+      const upd = await this.env.DB.prepare(
         `UPDATE sessions
             SET state = ?,
                 status_kind = 'active_ai',
@@ -72,6 +80,16 @@ export class HandoffTimeoutDurableObject extends DurableObject<Bindings> {
       )
         .bind(nextState, row.id)
         .run()
+      // Count only rows the CAS actually flipped — operator claims in-flight
+      // would land here as `changes === 0`.
+      if (upd.meta.changes > 0) reverted++
+    }
+
+    if (reverted > 0) {
+      const metrics: MetricsPort = this.env.METRICS
+        ? new AnalyticsEngineMetrics(this.env.METRICS)
+        : noopMetrics
+      metrics.counter('handoff_timeout_reverts_total', {}, reverted)
     }
 
     await this.ctx.storage.setAlarm(Date.now() + POLL_INTERVAL_MS)

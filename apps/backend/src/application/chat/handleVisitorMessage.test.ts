@@ -10,6 +10,7 @@ import { MemoryKnowledgeStore } from '../../infrastructure/adapters/memory/memor
 import { VisitorId, UsdCents, ChunkId, AdminId } from '@support/shared'
 import type { EmbedderPort, LlmPort, LlmRequest } from '../ports'
 import type { ChatDeps } from './handleVisitorMessage'
+import { RecordingMetrics } from '../../../tests/helpers/recordingMetrics'
 
 const DIM = 8
 
@@ -427,6 +428,59 @@ describe('handleVisitorMessage', () => {
     expect(capturedReq).toBeDefined()
     expect(capturedReq?.mcpEnabled).toBeUndefined()
     expect(capturedReq?.tools).toBeUndefined()
+  })
+
+  // ─── Metrics tests ───────────────────────────────────────────────────
+
+  it('metrics: emits chat_messages_total{role:visitor|assistant} + llm_request_duration_seconds + llm_cost_cents on happy path', async () => {
+    const env = await setup()
+    const metrics = new RecordingMetrics()
+    const r = await handleVisitorMessage({ ...makeDeps(env), metrics }, { sessionId: env.sessionId, content: 'Hi' })
+    expect(r.ok).toBe(true)
+
+    const visitorCounter = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'chat_messages_total' && c.labels['role'] === 'visitor')
+    const assistantCounter = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'chat_messages_total' && c.labels['role'] === 'assistant')
+    expect(visitorCounter).toBeDefined()
+    expect(assistantCounter).toBeDefined()
+
+    const llmDur = metrics.calls.find((c) => c.kind === 'histogram' && c.name === 'llm_request_duration_seconds')
+    expect(llmDur).toBeDefined()
+    expect(llmDur?.labels['model']).toBe('m')
+    expect(llmDur?.value).toBeGreaterThanOrEqual(0)
+
+    const llmCost = metrics.calls.find((c) => c.kind === 'histogram' && c.name === 'llm_cost_cents')
+    expect(llmCost).toBeDefined()
+    expect(llmCost?.labels['model']).toBe('m')
+  })
+
+  it('metrics: AI handoff emits handoff_requests_total{kind:ai_decision,category} + chat_messages_total{role:system_event}', async () => {
+    const env = await setup()
+    await env.siteConfigStore.upsertOnboarding({
+      siteKey: 'X', siteName: 'Acme', primaryColor: '#000',
+      llm4agentsApiKeyEncrypted: 'enc::sk-proxy-xxxxxxxxxx',
+      agentModel: 'm', embeddingModel: 'e', embeddingDim: DIM,
+      systemPrompt: 'help', mcpEnabled: false,
+      handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: true },
+      adminOnline: true, onboardingStep: 9, onboardingCompleted: true,
+    })
+    const metrics = new RecordingMetrics()
+    const stubLlm: LlmPort = {
+      async *chatStream() {
+        await Promise.resolve()
+        yield { type: 'tool_start', name: 'request_human_handoff', argsJson: '{"reason":"user wants human","category":"user_request"}' }
+        yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
+      },
+    }
+    const r = await handleVisitorMessage({ ...makeDeps(env), llm: stubLlm, metrics }, { sessionId: env.sessionId, content: 'human please' })
+    expect(r.ok).toBe(true)
+
+    const handoffCtr = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'handoff_requests_total')
+    expect(handoffCtr).toBeDefined()
+    expect(handoffCtr?.labels['kind']).toBe('ai_decision')
+    expect(handoffCtr?.labels['category']).toBe('user_request')
+
+    const sysEvCtr = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'chat_messages_total' && c.labels['role'] === 'system_event')
+    expect(sysEvCtr).toBeDefined()
   })
 
   it('mcp + handoff: both can be active simultaneously (tools includes handoff AND mcpEnabled=true)', async () => {

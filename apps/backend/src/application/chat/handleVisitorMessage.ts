@@ -5,6 +5,8 @@ import { searchKnowledge } from '../kb/searchKnowledge'
 import { HANDOFF_TOOL, HANDOFF_TOOL_GUIDANCE, FALLBACK_NO_ADMIN_PROMPT } from './handoffPrompt'
 import { requestHandoff } from './conversationTransitions'
 import type { HandoffReason, HandoffCategory } from '../../domain/conversation'
+import type { MetricsPort } from '../../infrastructure/observability/metrics'
+import { noopMetrics } from '../../infrastructure/observability/metrics'
 
 export type ChatDeps = Readonly<{
   sessionStore: SessionStorePort
@@ -14,6 +16,12 @@ export type ChatDeps = Readonly<{
   embedder: EmbedderPort
   vectorStore: VectorStorePort
   decrypt: (envelope: string) => Promise<string>
+  /**
+   * Optional so existing call sites + tests don't have to thread a metrics
+   * adapter just to exercise chat logic. Defaults to `noopMetrics` when
+   * omitted. Production routes pass `c.metrics` from the Container.
+   */
+  metrics?: MetricsPort
 }>
 
 const VALID_CATEGORIES: readonly HandoffCategory[] = [
@@ -24,13 +32,17 @@ export async function handleVisitorMessage(
   deps: ChatDeps,
   input: { sessionId: SessionId; content: string; abort?: AbortSignal },
 ): Promise<Result<void, AppError>> {
+  const metrics: MetricsPort = deps.metrics ?? noopMetrics
   const sessionRes = await deps.sessionStore.getSession(input.sessionId)
   if (!sessionRes.ok) return sessionRes
   const session = sessionRes.value
   if (session.state.status === 'closed') return Err({ kind: 'session_closed', sessionId: input.sessionId })
   if (session.state.status === 'active_operator' || session.state.status === 'handoff_requested') {
     const v = await deps.sessionStore.appendMessage({ sessionId: input.sessionId, role: 'visitor', content: input.content, costCents: UsdCents(0) })
-    if (v.ok) deps.broadcast.publish(input.sessionId, { type: 'message', message: v.value })
+    if (v.ok) {
+      metrics.counter('chat_messages_total', { role: 'visitor' })
+      deps.broadcast.publish(input.sessionId, { type: 'message', message: v.value })
+    }
     return Ok(undefined)
   }
 
@@ -41,6 +53,7 @@ export async function handleVisitorMessage(
 
   const visitorMsg = await deps.sessionStore.appendMessage({ sessionId: input.sessionId, role: 'visitor', content: input.content, costCents: UsdCents(0) })
   if (!visitorMsg.ok) return visitorMsg
+  metrics.counter('chat_messages_total', { role: 'visitor' })
   deps.broadcast.publish(input.sessionId, { type: 'message', message: visitorMsg.value })
 
   const historyRes = await deps.sessionStore.listMessages(input.sessionId, { limit: MAX_HISTORY_TURNS })
@@ -77,6 +90,8 @@ export async function handleVisitorMessage(
   let cost = UsdCents(0)
   let handoffTriggered = false
   let handoffReason: HandoffReason | null = null
+  const model = cfg.value.agentModel
+  const llmStart = performance.now()
 
   // MCP: when site_config.mcpEnabled=true, signal the adapter to attach the
   // @llmforagents/sdk's MCP tools (scraper/search/image). The SDK handles
@@ -101,9 +116,13 @@ export async function handleVisitorMessage(
           buffer += ev.delta
           deps.broadcast.publish(input.sessionId, { type: 'token', messageId: pendingAssistantId, delta: ev.delta })
           break
-        case 'done':
+        case 'done': {
           cost = ev.costCents
+          const elapsed = (performance.now() - llmStart) / 1000
+          metrics.histogram('llm_request_duration_seconds', elapsed, { model })
+          metrics.histogram('llm_cost_cents', cost, { model })
           break
+        }
         case 'tool_start':
           if (ev.name === 'request_human_handoff') {
             let parsed: { reason?: unknown; category?: unknown } = {}
@@ -114,6 +133,7 @@ export async function handleVisitorMessage(
             const toolReason = typeof parsed.reason === 'string' ? parsed.reason : 'AI requested escalation'
             handoffReason = { kind: 'ai_decision', toolReason, category }
             handoffTriggered = true
+            metrics.counter('handoff_requests_total', { kind: 'ai_decision', category })
             ctrl.abort()
           }
           break
@@ -146,7 +166,10 @@ export async function handleVisitorMessage(
           content: `AI escaló la conversación: ${handoffReason.toolReason}`,
           costCents: UsdCents(0),
         })
-        if (sysEv.ok) deps.broadcast.publish(input.sessionId, { type: 'message', message: sysEv.value })
+        if (sysEv.ok) {
+          metrics.counter('chat_messages_total', { role: 'system_event' })
+          deps.broadcast.publish(input.sessionId, { type: 'message', message: sysEv.value })
+        }
         deps.broadcast.publish(input.sessionId, { type: 'state_changed', from: session.state, to: trans.next })
         deps.broadcast.publish('admin_inbox', { type: 'new_handoff', sessionId: input.sessionId, reason: handoffReason })
       }
@@ -160,6 +183,9 @@ export async function handleVisitorMessage(
     content: buffer, costCents: cost,
     ...(ragHitsForPersist.length > 0 ? { ragHits: ragHitsForPersist } : {}),
   })
-  if (assistantMsg.ok) deps.broadcast.publish(input.sessionId, { type: 'message', message: assistantMsg.value })
+  if (assistantMsg.ok) {
+    metrics.counter('chat_messages_total', { role: 'assistant' })
+    deps.broadcast.publish(input.sessionId, { type: 'message', message: assistantMsg.value })
+  }
   return Ok(undefined)
 }

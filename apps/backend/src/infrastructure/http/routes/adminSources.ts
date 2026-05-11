@@ -27,6 +27,7 @@ function buildIngestDeps(c: Container) {
     decrypt: c.decrypt,
     extractChunks,
     logger: c.logger,
+    metrics: c.metrics,
   }
 }
 

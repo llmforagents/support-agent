@@ -2,6 +2,8 @@ import { HANDOFF_TIMEOUT_MS } from '@support/shared'
 import { timeoutRevert } from '../../application/chat/conversationTransitions'
 import type { SessionStorePort, BroadcastPort } from '../../application/ports'
 import type { Logger } from '../observability/logger'
+import type { MetricsPort } from '../observability/metrics'
+import { noopMetrics } from '../observability/metrics'
 
 const POLL_INTERVAL_MS = 15_000
 
@@ -17,13 +19,17 @@ export interface HandoffTimeoutSchedulerHandle {
 
 export class HandoffTimeoutScheduler implements HandoffTimeoutSchedulerHandle {
   private timer: NodeJS.Timeout | null = null
+  private readonly metrics: MetricsPort
 
   constructor(
     private readonly sessionStore: SessionStorePort,
     private readonly broadcast: BroadcastPort,
     private readonly logger?: Logger,
     private readonly pollIntervalMs: number = POLL_INTERVAL_MS,
-  ) {}
+    metrics: MetricsPort = noopMetrics,
+  ) {
+    this.metrics = metrics
+  }
 
   start(): void {
     if (this.timer) return  // already running
@@ -50,6 +56,7 @@ export class HandoffTimeoutScheduler implements HandoffTimeoutSchedulerHandle {
       this.logger?.warn({ err: r.error }, 'handoffTimeoutScheduler: listSessions failed')
       return
     }
+    let reverted = 0
     for (const sess of r.value) {
       if (sess.state.status !== 'handoff_requested') continue
       const requestedAt = new Date(sess.state.requestedAt).getTime()
@@ -65,6 +72,10 @@ export class HandoffTimeoutScheduler implements HandoffTimeoutSchedulerHandle {
       if (!upd.value.updated) continue   // race lost — admin claimed in between
       this.broadcast.publish(sess.id, { type: 'state_changed', from: sess.state, to: trans.next })
       this.logger?.info({ sessionId: sess.id, ageMs: age }, 'handoff timeout reverted')
+      reverted++
+    }
+    if (reverted > 0) {
+      this.metrics.counter('handoff_timeout_reverts_total', {}, reverted)
     }
   }
 }

@@ -9,6 +9,7 @@ import { InProcessSseHub } from '../../infrastructure/sse/inProcessSseHub'
 import { MemoryMysqlConnectionStore } from '../../infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import { Ok, type Result, type AppError } from '@support/shared'
 import type { RawChunk } from '../../domain/source'
+import { RecordingMetrics } from '../../../tests/helpers/recordingMetrics'
 
 async function setup() {
   const knowledgeStore = new MemoryKnowledgeStore()
@@ -92,6 +93,56 @@ describe('ingestSource', () => {
     }, src.value.id)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error.kind).toBe('source_invalid_state')
+  })
+
+  it('metrics: happy path emits ingest_started_total + ingest_completed_total{status:ready} + ingest_duration_seconds + ingest_progress_chunks', async () => {
+    const env = await setup()
+    const src = await env.knowledgeStore.createSource({ name: 'doc', sourceType: 'txt', config: { sourceType: 'txt', fileRef: 'r' } })
+    if (!src.ok) throw new Error('seed')
+    const metrics = new RecordingMetrics()
+    const extractChunks = (): Promise<Result<readonly RawChunk[], AppError>> => Promise.resolve(Ok([
+      { text: 'a', tokenCount: 1, metadata: {} },
+      { text: 'b', tokenCount: 1, metadata: {} },
+    ]))
+    const r = await ingestSource({
+      ...env, decrypt: (s: string) => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s),
+      extractChunks, metrics,
+    }, src.value.id)
+    expect(r.ok).toBe(true)
+
+    const started = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'ingest_started_total')
+    expect(started).toBeDefined()
+    expect(started?.labels['source_type']).toBe('txt')
+
+    const completed = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'ingest_completed_total')
+    expect(completed).toBeDefined()
+    expect(completed?.labels['status']).toBe('ready')
+    expect(completed?.labels['source_type']).toBe('txt')
+
+    const duration = metrics.calls.find((c) => c.kind === 'histogram' && c.name === 'ingest_duration_seconds')
+    expect(duration).toBeDefined()
+    expect(duration?.labels['source_type']).toBe('txt')
+
+    const progress = metrics.calls.find((c) => c.kind === 'gauge' && c.name === 'ingest_progress_chunks')
+    expect(progress).toBeDefined()
+    expect(progress?.value).toBe(2)
+  })
+
+  it('metrics: extract failure emits ingest_completed_total{status:error}', async () => {
+    const env = await setup()
+    const src = await env.knowledgeStore.createSource({ name: 'bad', sourceType: 'pdf', config: { sourceType: 'pdf', fileRef: 'r' } })
+    if (!src.ok) throw new Error('seed')
+    const metrics = new RecordingMetrics()
+    const r = await ingestSource({
+      ...env, decrypt: (s: string) => Promise.resolve(s), metrics,
+      extractChunks: () => Promise.resolve({ ok: false, error: { kind: 'pdf_encrypted' } } as never),
+    }, src.value.id)
+    expect(r.ok).toBe(false)
+
+    const completed = metrics.calls.find((c) => c.kind === 'counter' && c.name === 'ingest_completed_total')
+    expect(completed).toBeDefined()
+    expect(completed?.labels['status']).toBe('error')
+    expect(completed?.labels['source_type']).toBe('pdf')
   })
 
   it('re-ingest after success bumps generation', async () => {

@@ -7,6 +7,8 @@ import type {
 } from '../ports'
 import type { ExtractDeps } from '../../infrastructure/parsers'
 import type { Logger } from '../../infrastructure/observability/logger'
+import type { MetricsPort } from '../../infrastructure/observability/metrics'
+import { noopMetrics } from '../../infrastructure/observability/metrics'
 
 export type ExtractFn = (cfg: SourceConfig, deps: ExtractDeps) => Promise<Result<readonly RawChunk[], AppError>>
 
@@ -21,6 +23,12 @@ export type IngestDeps = Readonly<{
   decrypt: (envelope: string) => Promise<string>
   extractChunks: ExtractFn
   logger?: Logger
+  /**
+   * Optional so existing call sites + tests don't have to thread a metrics
+   * adapter just to exercise ingest logic. Defaults to `noopMetrics` when
+   * omitted. Production routes pass `c.metrics` from the Container.
+   */
+  metrics?: MetricsPort
 }>
 
 const BATCH_SIZE = 50
@@ -48,9 +56,11 @@ function asIngestError(e: AppError): IngestError {
 }
 
 export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promise<Result<void, AppError>> {
+  const metrics: MetricsPort = deps.metrics ?? noopMetrics
   const sourceRes = await deps.knowledgeStore.getSource(sourceId)
   if (!sourceRes.ok) return sourceRes
   const src = sourceRes.value
+  const sourceType = src.config.sourceType
 
   const allowed = ['idle', 'ready', 'error', 'paused']
   if (!allowed.includes(src.state.status)) {
@@ -66,6 +76,9 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
   const currentGeneration = src.state.currentGeneration
   const nextGen = currentGeneration + 1
   const startedAt = new Date()
+  const ingestStart = performance.now()
+
+  metrics.counter('ingest_started_total', { source_type: sourceType })
 
   // Transition to ingesting (progress=0/0 because total is unknown until extract finishes)
   await deps.knowledgeStore.updateSourceState(sourceId, {
@@ -86,6 +99,8 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
       currentGeneration,
     })
     deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'error' })
+    metrics.counter('ingest_completed_total', { source_type: sourceType, status: 'error' })
+    metrics.histogram('ingest_duration_seconds', (performance.now() - ingestStart) / 1000, { source_type: sourceType })
     return extractRes
   }
 
@@ -113,6 +128,8 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
         currentGeneration,
       })
       deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'error' })
+      metrics.counter('ingest_completed_total', { source_type: sourceType, status: 'error' })
+      metrics.histogram('ingest_duration_seconds', (performance.now() - ingestStart) / 1000, { source_type: sourceType })
       return Err({ kind: 'embedding_provider_failed', cause })
     }
     const inserts: ChunkInsert[] = batch.map((c, j) => {
@@ -138,6 +155,8 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
         failedAt: new Date(),
         currentGeneration,
       })
+      metrics.counter('ingest_completed_total', { source_type: sourceType, status: 'error' })
+      metrics.histogram('ingest_duration_seconds', (performance.now() - ingestStart) / 1000, { source_type: sourceType })
       return upsertRes
     }
     processed += batch.length
@@ -148,6 +167,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
       currentGeneration,
       pendingGeneration: nextGen,
     })
+    metrics.gauge('ingest_progress_chunks', processed, { source_id: sourceId })
     deps.broadcast.publish('admin_inbox', { type: 'source_progress', sourceId, processed, total })
   }
 
@@ -157,6 +177,8 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
     chunkCount: total,
     currentGeneration: nextGen,
   })
+  metrics.counter('ingest_completed_total', { source_type: sourceType, status: 'ready' })
+  metrics.histogram('ingest_duration_seconds', (performance.now() - ingestStart) / 1000, { source_type: sourceType })
   deps.broadcast.publish('admin_inbox', { type: 'source_state', sourceId, status: 'ready' })
 
   // Cleanup stale chunks from previous generations (fire-and-forget; failure is
