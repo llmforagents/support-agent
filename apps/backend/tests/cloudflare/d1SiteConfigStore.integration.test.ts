@@ -50,24 +50,4 @@ describe('D1SiteConfigStore @integration', () => {
     const got = await store.get()
     expect(got.ok && got.value?.adminOnline).toBe(true)
   })
-
-  it('setMcpEnabled toggles mcp_enabled and round-trips through get', async () => {
-    const store = new D1SiteConfigStore(env.DB)
-    // Seed a row first — D1 has no rows by default, and setMcpEnabled only
-    // UPDATEs (matching Pg's behavior of needing a pre-existing row).
-    await store.upsertOnboarding({
-      siteKey: 'site-mcp',
-      siteName: 'Acme',
-      llm4agentsApiKeyEncrypted: 'enc',
-      systemPrompt: 'hi',
-    })
-    const r1 = await store.setMcpEnabled(true)
-    expect(r1.ok).toBe(true)
-    const cfg1 = await store.get()
-    expect(cfg1.ok && cfg1.value?.mcpEnabled).toBe(true)
-    const r2 = await store.setMcpEnabled(false)
-    expect(r2.ok).toBe(true)
-    const cfg2 = await store.get()
-    expect(cfg2.ok && cfg2.value?.mcpEnabled).toBe(false)
-  })
 })

@@ -8,63 +8,26 @@ export type LlmClientFactory = (apiKey: string, apiBase?: string) => InstanceTyp
 const realFactory: LlmClientFactory = (apiKey, apiBase) =>
   new LLM4AgentsClient({ apiKey, ...(apiBase ? { baseUrl: apiBase } : {}) })
 
-// MCP integration: when `req.mcpEnabled === true`, we pass the SDK's real
-// `client.tools` instance through `conversation({ tools })`. The SDK handles
-// MCP tool enumeration (`getDefinitions()` → `mcp.listTools()`) and execution
-// (`call()` → `mcp.callTool()`) internally. Our existing `tool_start`
-// interception in handleVisitorMessage.ts only fires for `request_human_handoff`
-// and aborts the stream before the SDK invokes `tools.call()` — MCP tool calls
-// pass through untouched (the SDK executes them and feeds the result back).
-//
-// When both handoff and MCP are active, `mergeToolsShim` returns a single
-// duck-typed object whose `getDefinitions()` concatenates the handoff
-// definition with the MCP definitions, and whose `call()` delegates to the
-// SDK's `Tools.call()` (handoff never reaches `call()` because of the
-// stream-level abort, so we don't need to special-case it here).
-//
-// SDK's `Tools` class is not exported; we satisfy its structural contract
-// (`getDefinitions()` + `call()`) and cast to `never` at the boundary, which
-// is the only sanctioned use of `as` per the TypeScript rules (adapter glue,
-// not external data).
+// Handoff tools are surfaced to the SDK through a structural shim that
+// satisfies its `Tools` contract (`getDefinitions()` + `call()`). The SDK's
+// `Tools` class is not exported; the `as never` cast at the boundary is the
+// only sanctioned use of `as` per the TypeScript rules (adapter glue, not
+// external data). `call()` is unreachable in practice — the handoff tool is
+// intercepted at the stream level in `handleVisitorMessage` and the stream is
+// aborted before the SDK ever invokes it.
 type ToolsShim = Readonly<{
   getDefinitions: () => Promise<readonly ToolDefinition[]>
   call: (name: string, args: Readonly<Record<string, unknown>>, signal?: AbortSignal) => Promise<McpToolResult>
 }>
 
-const EMPTY_MCP_RESULT: McpToolResult = { content: [], text: '', raw: [] }
+const EMPTY_TOOL_RESULT: McpToolResult = { content: [], text: '', raw: [] }
 
 function makeHandoffOnlyShim(tools: readonly LlmTool[]): never {
   // LlmTool is structurally identical to ToolDefinition.
   const defs: ToolDefinition[] = [...tools]
   const shim: ToolsShim = {
     getDefinitions: () => Promise.resolve(defs),
-    // `call()` is unreachable: the handoff tool is intercepted at the stream
-    // level and the stream is aborted before the SDK invokes any call.
-    call: () => Promise.resolve(EMPTY_MCP_RESULT),
-  }
-  return shim as never
-}
-
-function makeMcpOnlyTools(sdkTools: InstanceType<typeof LLM4AgentsClient>['tools']): never {
-  // Pass the SDK's real `Tools` instance straight through — it already
-  // satisfies the structural contract `conversation()` expects.
-  return sdkTools as never
-}
-
-function makeHandoffPlusMcpShim(
-  handoffTools: readonly LlmTool[],
-  sdkTools: InstanceType<typeof LLM4AgentsClient>['tools'],
-): never {
-  const handoffDefs: ToolDefinition[] = [...handoffTools]
-  const shim: ToolsShim = {
-    getDefinitions: async () => {
-      const mcpDefs = await sdkTools.getDefinitions()
-      return [...handoffDefs, ...mcpDefs]
-    },
-    // Handoff never reaches `call()` (stream is aborted on tool_start);
-    // anything that does reach `call()` is an MCP tool and is dispatched
-    // through the SDK's `Tools.call()`.
-    call: (name, args, signal) => sdkTools.call(name, args, signal),
+    call: () => Promise.resolve(EMPTY_TOOL_RESULT),
   }
   return shim as never
 }
@@ -87,18 +50,10 @@ export class Llm4AgentsLlmAdapter implements LlmPort {
 
   async *chatStream(req: LlmRequest): AsyncGenerator<LlmStreamEvent, void, void> {
     const client = this.factory(req.apiKey, this.apiBase)
-    const hasHandoff = req.tools !== undefined && req.tools.length > 0
-    const mcpOn = req.mcpEnabled === true
-    let toolsOption: never | undefined
-    if (hasHandoff && mcpOn && req.tools) {
-      toolsOption = makeHandoffPlusMcpShim(req.tools, client.tools)
-    } else if (hasHandoff && req.tools) {
-      toolsOption = makeHandoffOnlyShim(req.tools)
-    } else if (mcpOn) {
-      toolsOption = makeMcpOnlyTools(client.tools)
-    } else {
-      toolsOption = undefined
-    }
+    const toolsOption: never | undefined =
+      req.tools !== undefined && req.tools.length > 0
+        ? makeHandoffOnlyShim(req.tools)
+        : undefined
     const conv = client.chat.conversation({
       model: req.model,
       system: req.system,

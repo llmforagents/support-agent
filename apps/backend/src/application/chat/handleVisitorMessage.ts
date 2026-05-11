@@ -93,11 +93,6 @@ export async function handleVisitorMessage(
   const model = cfg.value.agentModel
   const llmStart = performance.now()
 
-  // MCP: when site_config.mcpEnabled=true, signal the adapter to attach the
-  // @llmforagents/sdk's MCP tools (scraper/search/image). The SDK handles
-  // tool enumeration + execution internally; our existing `tool_start`
-  // handoff interception runs in parallel and is unaffected.
-  const mcpOn = cfg.value.mcpEnabled
   const llmReq = {
     apiKey,
     model: cfg.value.agentModel,
@@ -105,7 +100,6 @@ export async function handleVisitorMessage(
     messages: history,
     abort: ctrl.signal,
     ...(tools !== undefined ? { tools } : {}),
-    ...(mcpOn ? { mcpEnabled: true as const } : {}),
   }
 
   try {

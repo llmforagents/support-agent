@@ -63,7 +63,6 @@ export interface SiteConfigStorePort {
   get(): Promise<Result<SiteConfigRow | null, AppError>>
   upsertOnboarding(input: Partial<SiteConfigRow> & { siteKey: string }): Promise<Result<SiteConfigRow, AppError>>
   setAdminOnline(online: boolean): Promise<Result<void, AppError>>
-  setMcpEnabled(enabled: boolean): Promise<Result<void, AppError>>
   setOnboardingStep(step: number, completed: boolean): Promise<Result<void, AppError>>
 }
 
@@ -189,12 +188,6 @@ export type LlmRequest = Readonly<{
   messages: ReadonlyArray<{ role: 'user' | 'assistant'; content: string }>
   tools?: readonly LlmTool[]
   abort: AbortSignal
-  /**
-   * When true, the LLM adapter exposes the @llmforagents/sdk's MCP tools
-   * (scraper/search/image) to the model in addition to any `tools` provided
-   * here. Independent of `tools`: both, either, or neither may be set.
-   */
-  mcpEnabled?: boolean
 }>
 
 export interface LlmPort {

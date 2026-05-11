@@ -35,11 +35,6 @@ export class MemorySiteConfigStore implements SiteConfigStorePort {
     return Promise.resolve(Ok(undefined))
   }
 
-  setMcpEnabled(enabled: boolean): Promise<Result<void, AppError>> {
-    if (this.row) this.row = { ...this.row, mcpEnabled: enabled }
-    return Promise.resolve(Ok(undefined))
-  }
-
   setOnboardingStep(step: number, completed: boolean): Promise<Result<void, AppError>> {
     if (this.row) this.row = { ...this.row, onboardingStep: step, onboardingCompleted: completed }
     return Promise.resolve(Ok(undefined))

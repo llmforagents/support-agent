@@ -109,29 +109,12 @@ const messages = {
   'kb.detail.chunks': 'First chunks',
   'kb.detail.close': 'Close',
 
-  // ── Settings page ──────────────────────────────────────────────────────────
-  'settings.title': 'Settings',
-  'settings.loading': 'Loading settings…',
-  'settings.loadError': 'Failed to load settings.',
-  'settings.mcp.title': 'MCP access',
-  'settings.mcp.description': 'Allow the AI agent to invoke Model Context Protocol tools (web search, scraping, etc.).',
-  'settings.mcp.toggleAriaLabel': 'Enable MCP access',
-  'settings.mcp.statusOn': 'Enabled',
-  'settings.mcp.statusOff': 'Disabled',
-  'settings.mcp.confirmTitleOn': 'Enable MCP?',
-  'settings.mcp.confirmTitleOff': 'Disable MCP?',
-  'settings.mcp.confirmBodyOn': 'The agent will be able to call external MCP tools. Check that your llm4agents plan allows it.',
-  'settings.mcp.confirmBodyOff': 'The agent will no longer have access to MCP tools. Ongoing conversations are unaffected.',
-  'settings.mcp.toggleError': 'Could not update setting. Please try again.',
-
   // ── Sidebar ────────────────────────────────────────────────────────────────
   'sidebar.conversations': 'Conversations',
   'sidebar.knowledgeBase': 'Knowledge base',
-  'sidebar.settings': 'Settings',
 
   // ── Common ─────────────────────────────────────────────────────────────────
   'common.cancel': 'Cancel',
-  'common.confirm': 'Confirm',
   'common.close': 'Close',
   'common.loading': 'Loading…',
 

@@ -3,12 +3,11 @@ import { cn } from '@/lib/cn'
 import { t } from '@/lib/i18n'
 import { OnlineToggle } from '@/presentation/components/admin/OnlineToggle'
 
-type Item = { readonly to: string; readonly icon: string; readonly labelKey: 'sidebar.conversations' | 'sidebar.knowledgeBase' | 'sidebar.settings' }
+type Item = { readonly to: string; readonly icon: string; readonly labelKey: 'sidebar.conversations' | 'sidebar.knowledgeBase' }
 
 const items: readonly Item[] = [
   { to: '/conversations', icon: '💬', labelKey: 'sidebar.conversations' },
   { to: '/knowledge-base', icon: '📚', labelKey: 'sidebar.knowledgeBase' },
-  { to: '/settings', icon: '⚙️', labelKey: 'sidebar.settings' },
 ]
 
 export function Sidebar(): React.JSX.Element {

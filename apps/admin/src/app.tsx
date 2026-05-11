@@ -4,7 +4,6 @@ import { Login } from '@/presentation/routes/Login'
 import { Onboarding } from '@/presentation/routes/Onboarding'
 import { Conversations } from '@/presentation/routes/Conversations'
 import { KnowledgeBase } from '@/presentation/routes/KnowledgeBase'
-import { Settings } from '@/presentation/routes/Settings'
 
 function RequireAuth({ children }: { readonly children: React.JSX.Element }): React.JSX.Element {
   const { auth } = useAuth()
@@ -58,14 +57,6 @@ export function App(): React.JSX.Element {
             element={
               <RequireAuth>
                 <KnowledgeBase />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <RequireAuth>
-                <Settings />
               </RequireAuth>
             }
           />

@@ -180,23 +180,6 @@ export class D1SiteConfigStore implements SiteConfigStorePort {
     }
   }
 
-  async setMcpEnabled(enabled: boolean): Promise<Result<void, AppError>> {
-    try {
-      const r = await this.db
-        .prepare(
-          `UPDATE site_config SET mcp_enabled = ?, updated_at = datetime('now') WHERE id = 1`,
-        )
-        .bind(enabled ? 1 : 0)
-        .run()
-      if (!r.success) {
-        return Err({ kind: 'infra_db_error', cause: r.error ?? 'd1 update failed' })
-      }
-      return Ok(undefined)
-    } catch (err) {
-      return Err({ kind: 'infra_db_error', cause: String(err) })
-    }
-  }
-
   async setOnboardingStep(step: number, completed: boolean): Promise<Result<void, AppError>> {
     try {
       const r = await this.db

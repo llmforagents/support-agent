@@ -201,7 +201,6 @@ export const apiClient = {
   configGet(): Promise<{
     readonly adminOnline?: boolean
     readonly onboardingCompleted?: boolean
-    readonly mcpEnabled?: boolean
     readonly [k: string]: unknown
   }> {
     return request('/config')
@@ -210,12 +209,6 @@ export const apiClient = {
     return request('/config/online', {
       method: 'PUT',
       body: JSON.stringify({ online }),
-    })
-  },
-  mcpSetEnabled(enabled: boolean): Promise<{ readonly mcpEnabled: boolean }> {
-    return request('/mcp', {
-      method: 'PUT',
-      body: JSON.stringify({ enabled }),
     })
   },
 

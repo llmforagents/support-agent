@@ -73,16 +73,6 @@ cd apps/backend && pnpm dlx wrangler deploy
 - The handoff timeout runs as a Durable Object alarm, so the cadence may have ~1s jitter vs. the Node `setInterval`.
 - Embeddings, KB ingest, and chat all work the same as on the Node path.
 
-## MCP integration
-
-The agent can call external tools exposed via the [Model Context Protocol](https://modelcontextprotocol.io) — web search, scraping, image generation, and similar — when the toggle is on. Tools are sourced from the configured `llm4agents` proxy; the SDK handles enumeration and execution, so no extra plumbing is required on the support backend.
-
-Enable it from **Admin → Configuración → Acceso al MCP**. The switch is **off by default**, asks for confirmation before changing, persists in `site_config.mcp_enabled`, and takes effect on the next visitor message.
-
-**Cost.** MCP tool calls run upstream against the same `llm4agents` API key the chat agent already uses, so tool usage is billed by `llm4agents` per its pricing. Verify your plan supports MCP before enabling.
-
-**Roadmap.** v0.5.0 ships a single global toggle. Per-tool allowlists (e.g. "enable search but not image generation") are planned for a future release.
-
 ## Metrics
 
 On the Node + Postgres deploy the backend exposes a Prometheus scrape endpoint at `/metrics`:
@@ -136,9 +126,11 @@ Integration tests use `@testcontainers/postgresql` — Docker is required.
 ## Roadmap
 
 - **P1 (v0.1.0)** ✅ Skeleton + chat without RAG.
-- **P2 (v0.2.0)** Knowledge base: PDF/md/txt ingestion + embeddings + RAG retrieval.
-- **P3 (v0.3.0)** MySQL source + auto-handoff + operator mode.
-- **P4 (v0.4.0)** MCP toggle + metrics + Cloudflare adapters + WCAG AA polish.
+- **P2 (v0.2.0)** ✅ Knowledge base: PDF/md/txt ingestion + embeddings + RAG retrieval.
+- **P3 (v0.3.0)** ✅ MySQL source + auto-handoff + operator mode.
+- **P4 (v0.4.0)** ✅ Cloudflare adapters (D1 + Vectorize + R2 + Durable Objects).
+- **P5 (v0.5.0)** ✅ Prometheus metrics + WCAG AA pass + Playwright E2E suite.
+- **P5.1 (v0.5.1)** ✅ Remove the MCP toggle — web support is covered by RAG + MySQL ingest + human handoff; MCP added cost-control surface area we don't want to maintain.
 
 ## License
 

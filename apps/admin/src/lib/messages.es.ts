@@ -109,29 +109,12 @@ const messages = {
   'kb.detail.chunks': 'Primeros chunks',
   'kb.detail.close': 'Cerrar',
 
-  // ── Settings page ──────────────────────────────────────────────────────────
-  'settings.title': 'Configuración',
-  'settings.loading': 'Cargando configuración…',
-  'settings.loadError': 'No se pudo cargar la configuración.',
-  'settings.mcp.title': 'Acceso al MCP',
-  'settings.mcp.description': 'Permite que el agente IA invoque herramientas del Model Context Protocol (búsqueda web, scraping, etc.).',
-  'settings.mcp.toggleAriaLabel': 'Activar acceso al MCP',
-  'settings.mcp.statusOn': 'Activo',
-  'settings.mcp.statusOff': 'Desactivado',
-  'settings.mcp.confirmTitleOn': '¿Activar MCP?',
-  'settings.mcp.confirmTitleOff': '¿Desactivar MCP?',
-  'settings.mcp.confirmBodyOn': 'El agente podrá usar herramientas externas vía MCP. Verificá que tu plan de llm4agents lo permita.',
-  'settings.mcp.confirmBodyOff': 'El agente dejará de tener acceso a herramientas MCP. Las conversaciones en curso no se verán afectadas.',
-  'settings.mcp.toggleError': 'No se pudo actualizar el ajuste. Intentá de nuevo.',
-
   // ── Sidebar ────────────────────────────────────────────────────────────────
   'sidebar.conversations': 'Conversaciones',
   'sidebar.knowledgeBase': 'Knowledge base',
-  'sidebar.settings': 'Configuración',
 
   // ── Common ─────────────────────────────────────────────────────────────────
   'common.cancel': 'Cancelar',
-  'common.confirm': 'Confirmar',
   'common.close': 'Cerrar',
   'common.loading': 'Cargando…',
 

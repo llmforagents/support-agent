@@ -14,7 +14,6 @@ import { metricsRoutes } from './routes/metrics'
 import { adminAuthRoutes } from './routes/adminAuth'
 import { adminOnboardingRoutes } from './routes/adminOnboarding'
 import { adminConfigRoutes } from './routes/adminConfig'
-import { adminMcpRoutes } from './routes/adminMcp'
 import { adminSourcesRoutes } from './routes/adminSources'
 import { adminMysqlRoutes } from './routes/adminMysql'
 import { adminStreamRoutes } from './routes/adminStream'
@@ -52,8 +51,6 @@ export function createApp(c: Container): Hono {
   app.route('/v1/admin/auth', adminAuthRoutes(c))
   app.use('/v1/admin/onboarding/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/config/*', csrf({ secure: c.env.COOKIE_SECURE }))
-  app.use('/v1/admin/mcp', csrf({ secure: c.env.COOKIE_SECURE }))
-  app.use('/v1/admin/mcp/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/sources/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/mysql-connections/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/sessions/*', csrf({ secure: c.env.COOKIE_SECURE }))
@@ -61,7 +58,6 @@ export function createApp(c: Container): Hono {
   app.route('/v1/admin/sessions', operatorRoutes(c))
   app.route('/v1/admin/onboarding', adminOnboardingRoutes(c))
   app.route('/v1/admin/config', adminConfigRoutes(c))
-  app.route('/v1/admin/mcp', adminMcpRoutes(c))
   app.route('/v1/admin/sources', adminSourcesRoutes(c))
   app.route('/v1/admin/mysql-connections', adminMysqlRoutes(c))
   app.route('/v1/admin/stream', adminStreamRoutes(c))
