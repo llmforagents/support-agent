@@ -14,7 +14,7 @@
     "test": "pnpm -r run test",
     "test:ci": "pnpm -r run test:ci",
     "test:integration": "pnpm --filter backend run test:integration",
-    "audit": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm build && pnpm test:integration && pnpm --filter backend run test:cf",
+    "audit": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm build && pnpm test:integration && pnpm --filter backend run test:cf && pnpm --filter backend run build:cf",
     "dev:backend": "pnpm --filter backend dev",
     "dev:admin": "pnpm --filter admin dev",
     "dev:widget": "pnpm --filter widget dev"
