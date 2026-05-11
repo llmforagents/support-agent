@@ -3,7 +3,20 @@ import { streamSSE } from 'hono/streaming'
 import { SessionId, VisitorId, SSE_HEARTBEAT_MS } from '@support/shared'
 import type { Container } from '../../../composition/container'
 import { verifyStreamToken } from '../../crypto/streamToken'
-import type { BroadcastEvent } from '../../../application/ports'
+import type { BroadcastChannel, BroadcastEvent, BroadcastPort } from '../../../application/ports'
+
+// Duck-type narrowing helper: returns the cloudflare-only
+// `proxySubscribeRequest` function when the bound adapter is
+// `DurableObjectBroadcast`, otherwise `undefined`. Centralised here so the
+// route stays single-source-of-truth across both deployments.
+type ProxySubscribeRequest = (channel: BroadcastChannel, signal: AbortSignal) => Promise<Response>
+type MaybeProxyAware = BroadcastPort & { proxySubscribeRequest?: ProxySubscribeRequest }
+function proxySubscribeRequestOn(port: BroadcastPort): ProxySubscribeRequest | undefined {
+  const candidate: MaybeProxyAware = port
+  return typeof candidate.proxySubscribeRequest === 'function'
+    ? candidate.proxySubscribeRequest
+    : undefined
+}
 
 let liveConnections = 0
 
@@ -30,6 +43,19 @@ export function widgetStreamRoutes(c: Container): Hono {
 
     const session = await c.sessionStore.getSession(sessionId)
     if (!session.ok) return ctx.json({ error: 'session_not_found' }, 404)
+
+    // Cloudflare path: when the bound BroadcastPort exposes
+    // `proxySubscribeRequest` (i.e. the DurableObjectBroadcast adapter),
+    // hand the SSE stream straight off to the per-channel DO and return
+    // its Response. The DO owns the long-lived stream, so the worker
+    // isolate is free to terminate after this fetch returns. Auth and
+    // session validation above still apply because we only reach here
+    // after they pass. The in-process pubsub bridge below is kept for
+    // the Node + Postgres deployment, which uses `InProcessSseHub`.
+    const proxy = proxySubscribeRequestOn(c.broadcast)
+    if (proxy !== undefined) {
+      return proxy(sessionId, ctx.req.raw.signal)
+    }
 
     liveConnections++
 

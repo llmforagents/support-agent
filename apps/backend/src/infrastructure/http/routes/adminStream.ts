@@ -2,8 +2,21 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { SSE_HEARTBEAT_MS } from '@support/shared'
 import type { Container } from '../../../composition/container'
-import type { BroadcastEvent } from '../../../application/ports'
+import type { BroadcastChannel, BroadcastEvent, BroadcastPort } from '../../../application/ports'
 import { requireAdmin } from '../middleware/requireAdmin'
+
+// Duck-type narrowing helper: returns the cloudflare-only
+// `proxySubscribeRequest` function when the bound adapter is
+// `DurableObjectBroadcast`, otherwise `undefined`. Mirrors the helper in
+// `widgetStream.ts` — both SSE routes use the same delegation pattern.
+type ProxySubscribeRequest = (channel: BroadcastChannel, signal: AbortSignal) => Promise<Response>
+type MaybeProxyAware = BroadcastPort & { proxySubscribeRequest?: ProxySubscribeRequest }
+function proxySubscribeRequestOn(port: BroadcastPort): ProxySubscribeRequest | undefined {
+  const candidate: MaybeProxyAware = port
+  return typeof candidate.proxySubscribeRequest === 'function'
+    ? candidate.proxySubscribeRequest
+    : undefined
+}
 
 export function adminStreamRoutes(c: Container): Hono {
   const app = new Hono()
@@ -14,6 +27,15 @@ export function adminStreamRoutes(c: Container): Hono {
   }))
 
   app.get('/', (ctx) => {
+    // Cloudflare path: see widgetStream.ts for the rationale. When the
+    // BroadcastPort exposes `proxySubscribeRequest`, the DO owns the SSE
+    // stream and we just relay its Response back to the admin client.
+    // `requireAdmin` middleware above has already authenticated the
+    // request before this handler runs.
+    const proxy = proxySubscribeRequestOn(c.broadcast)
+    if (proxy !== undefined) {
+      return proxy('admin_inbox', ctx.req.raw.signal)
+    }
     return streamSSE(ctx, async (stream) => {
       await stream.writeSSE({ data: JSON.stringify({ type: 'connected' }) })
 
