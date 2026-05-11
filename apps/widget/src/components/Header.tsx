@@ -16,20 +16,25 @@ export function Header({ siteName, primaryColor, adminOnline, conversationStatus
 
   if (conversationStatus === 'handoff_requested') {
     statusLabel = t('widget.statusHandoff')
-    statusColor = '#f59e0b'
+    // #fbbf24 = AA on indigo backgrounds; use solid amber-300 for adequate contrast on the colored header
+    statusColor = '#fcd34d'
   } else if (conversationStatus === 'active_operator') {
     statusLabel = t('widget.statusOperator')
-    statusColor = '#22c55e'
+    // Tailwind green-300 — good contrast on indigo header
+    statusColor = '#86efac'
   } else if (adminOnline) {
     statusLabel = t('widget.statusOnline')
-    statusColor = 'rgba(255,255,255,0.85)'
+    // Bumped from rgba(255,255,255,0.85) → solid white-on-primary fragment
+    statusColor = 'rgba(255,255,255,0.95)'
   } else {
     statusLabel = t('widget.statusOffline')
-    statusColor = 'rgba(255,255,255,0.6)'
+    // Bumped from rgba(255,255,255,0.6) → rgba 0.85 for AA on primary
+    statusColor = 'rgba(255,255,255,0.85)'
   }
 
   return (
     <div
+      className="w-on-primary"
       style={{
         background: primaryColor,
         color: '#fff',
@@ -44,6 +49,8 @@ export function Header({ siteName, primaryColor, adminOnline, conversationStatus
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <span style={{ fontWeight: 600, fontSize: '15px' }}>{siteName}</span>
         <span
+          role="status"
+          aria-live="polite"
           style={{
             fontSize: '11px',
             color: statusColor,
@@ -68,6 +75,8 @@ export function Header({ siteName, primaryColor, adminOnline, conversationStatus
         }}
       >
         <svg
+          aria-hidden="true"
+          focusable="false"
           xmlns="http://www.w3.org/2000/svg"
           width="18"
           height="18"

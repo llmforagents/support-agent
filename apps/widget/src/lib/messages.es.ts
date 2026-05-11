@@ -10,6 +10,16 @@ const messages = {
   'widget.statusOperator': '● Operador conectado',
   'widget.send': 'Enviar',
   'widget.close': 'Cerrar',
+  'widget.chatDialogLabel': 'Chat de soporte',
+  'widget.inputLabel': 'Mensaje',
+  'widget.yourMessage': 'Tu mensaje',
+  'widget.agentMessage': 'Mensaje del agente',
+  'widget.operatorMessage': 'Mensaje del operador',
+  'widget.systemEvent': 'Actualización de estado',
+  'widget.assistantTyping': 'El asistente está escribiendo',
+  'widget.assistantStreaming': 'Respuesta del asistente (en progreso)',
+  'widget.messageListLabel': 'Mensajes de la conversación',
+  'widget.operatorLabel': 'Agente de soporte',
 } as const
 
 export default messages

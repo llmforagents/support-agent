@@ -4,6 +4,53 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Support Widget</title>
+    <style>
+      /* Reset + a11y baseline for the embed iframe.
+         The widget renders inside a same-origin iframe, so these rules
+         are scoped to its document only and never leak to the host page. */
+      html, body { margin: 0; padding: 0; height: 100%; background: transparent; }
+      body { color: #1f2937; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+      /* Visible focus rings on every interactive element — WCAG 2.4.7 */
+      :focus-visible {
+        outline: 2px solid #4f46e5;
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+      /* Keep dark focus rings visible on the indigo header where outline blends in */
+      .w-on-primary :focus-visible {
+        outline-color: #ffffff;
+      }
+
+      /* Screen-reader-only utility */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Streaming token cursor — reduced-motion safe */
+      @keyframes blink {
+        from, to { opacity: 1; }
+        50% { opacity: 0; }
+      }
+
+      /* Respect reduced-motion — kill non-essential animations */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
     <script>
       // Injected by the backend at /embed/:siteKey — the template literal is replaced server-side
       window.__SITE_KEY__ = "{{siteKey}}"

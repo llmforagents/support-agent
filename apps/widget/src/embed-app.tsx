@@ -6,7 +6,7 @@
  */
 
 import { render } from 'preact'
-import { useState, useEffect, useRef } from 'preact/hooks'
+import { useState, useEffect, useRef, useId } from 'preact/hooks'
 import type { JSX } from 'preact'
 import type { ChatMessage, SseEvent, WidgetConfig } from './types'
 import { getOrCreateVisitorId } from './types'
@@ -14,6 +14,7 @@ import { makeApiClient } from './lib/apiClient'
 import { connectSse } from './lib/sseClient'
 import type { SseClient } from './lib/sseClient'
 import { ChatPanel } from './components/ChatPanel'
+import { t } from './lib/i18n'
 
 declare global {
   interface Window {
@@ -26,6 +27,7 @@ declare global {
 function App(): JSX.Element {
   const visitorId = getOrCreateVisitorId()
   const apiClient = makeApiClient(visitorId)
+  const dialogTitleId = useId()
 
   const [config, setConfig] = useState<WidgetConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -204,13 +206,15 @@ function App(): JSX.Element {
   if (error) {
     return (
       <div
+        role="alert"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
           fontFamily: 'system-ui, sans-serif',
-          color: '#6b7280',
+          // #4b5563 = 7.6:1 on white — passes AA for normal text
+          color: '#4b5563',
           fontSize: '14px',
           padding: '24px',
           textAlign: 'center',
@@ -224,13 +228,16 @@ function App(): JSX.Element {
   if (!config) {
     return (
       <div
+        role="status"
+        aria-live="polite"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
           fontFamily: 'system-ui, sans-serif',
-          color: '#9ca3af',
+          // #4b5563 passes AA on white (7.6:1) — gray-400/500 do not
+          color: '#4b5563',
           fontSize: '14px',
         }}
       >
@@ -242,10 +249,13 @@ function App(): JSX.Element {
   return (
     <div
       role="dialog"
-      aria-label={`${config.siteName} support chat`}
       aria-modal="false"
+      aria-labelledby={dialogTitleId}
       style={{ height: '100%' }}
     >
+      <span id={dialogTitleId} className="sr-only">
+        {`${config.siteName} — ${t('widget.chatDialogLabel')}`}
+      </span>
       <ChatPanel
         config={config}
         messages={messages}

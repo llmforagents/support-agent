@@ -36,9 +36,23 @@ function mount(siteKey: string, baseUrl: string): void {
 
   const shadow = host.attachShadow({ mode: 'open' })
 
+  // Inject focus-ring + reduced-motion CSS into the shadow root.
+  // The shadow root isolates these styles from the host page — no leakage.
+  const style = document.createElement('style')
+  style.textContent = [
+    'button:focus-visible{outline:2px solid #ffffff;outline-offset:2px;box-shadow:0 0 0 4px rgba(79,70,229,.45);}',
+    '@media (prefers-reduced-motion: reduce){button{transition:none !important;}}',
+  ].join('')
+  shadow.appendChild(style)
+
   // Launcher button
+  const dialogIframeId = 'llm4agents-widget-iframe'
   const btn = document.createElement('button')
+  btn.type = 'button'
   btn.setAttribute('aria-label', 'Open support chat')
+  btn.setAttribute('aria-expanded', 'false')
+  btn.setAttribute('aria-haspopup', 'dialog')
+  btn.setAttribute('aria-controls', dialogIframeId)
   btn.style.cssText = [
     'width:56px;height:56px;border-radius:50%;border:none;',
     'background:#4f46e5;color:#fff;cursor:pointer;',
@@ -56,12 +70,13 @@ function mount(siteKey: string, baseUrl: string): void {
     open = !open
 
     if (!iframe) {
-      iframe = createIframe(siteKey, baseUrl)
+      iframe = createIframe(siteKey, baseUrl, dialogIframeId)
       shadow.appendChild(iframe)
     }
 
     iframe.style.display = open ? 'block' : 'none'
     btn.setAttribute('aria-expanded', String(open))
+    btn.setAttribute('aria-label', open ? 'Close support chat' : 'Open support chat')
     setButtonIcon(btn, open ? 'close' : 'chat')
 
     if (open) {
@@ -115,8 +130,9 @@ function setButtonIcon(btn: HTMLButtonElement, icon: 'chat' | 'close'): void {
   btn.appendChild(svg)
 }
 
-function createIframe(siteKey: string, baseUrl: string): HTMLIFrameElement {
+function createIframe(siteKey: string, baseUrl: string, id: string): HTMLIFrameElement {
   const iframe = document.createElement('iframe')
+  iframe.id = id
   iframe.src = `${baseUrl}/embed/${siteKey}`
   iframe.title = 'Support chat'
   iframe.allow = 'clipboard-write'

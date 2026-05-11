@@ -1,5 +1,5 @@
 import type { JSX } from 'preact'
-import { useEffect, useRef } from 'preact/hooks'
+import { useEffect, useRef, useId } from 'preact/hooks'
 import type { ChatMessage, WidgetConfig } from '../types'
 import { Header } from './Header'
 import { MessageBubble } from './MessageBubble'
@@ -28,8 +28,11 @@ export function ChatPanel({
   onClose,
 }: ChatPanelProps): JSX.Element {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputId = useId()
 
-  // Auto-scroll to bottom when messages change or new tokens arrive
+  // Auto-scroll to bottom when messages change or new tokens arrive.
+  // `behavior: 'smooth'` is overridden to 'auto' by prefers-reduced-motion via the
+  // global `scroll-behavior: auto !important` rule in embed.html.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingToken])
@@ -57,11 +60,13 @@ export function ChatPanel({
         onClose={onClose}
       />
 
-      {/* Message list */}
+      {/* Message list — announces new additions to AT */}
       <div
         role="log"
         aria-live="polite"
         aria-relevant="additions"
+        aria-atomic="false"
+        aria-label={t('widget.messageListLabel')}
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -75,7 +80,8 @@ export function ChatPanel({
             style={{
               margin: 'auto',
               textAlign: 'center',
-              color: '#9ca3af',
+              // #4b5563 = 7.6:1 on white (AA pass). #9ca3af = 2.9:1 (FAIL).
+              color: '#4b5563',
               fontSize: '14px',
             }}
           >
@@ -89,7 +95,11 @@ export function ChatPanel({
 
         {/* Streaming token bubble */}
         {streamingToken !== null && streamingToken.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '8px' }}>
+          <div
+            role="article"
+            aria-label={t('widget.assistantStreaming')}
+            style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '8px' }}
+          >
             <div
               style={{
                 maxWidth: '80%',
@@ -103,6 +113,7 @@ export function ChatPanel({
             >
               {streamingToken}
               <span
+                aria-hidden="true"
                 style={{
                   display: 'inline-block',
                   width: '2px',
@@ -122,16 +133,18 @@ export function ChatPanel({
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '8px' }}>
             <div
               role="status"
-              aria-label="Assistant is typing"
+              aria-live="polite"
+              aria-label={t('widget.assistantTyping')}
               style={{
                 padding: '8px 14px',
                 borderRadius: '16px',
                 background: '#f3f4f6',
-                color: '#6b7280',
+                // #4b5563 = 7.6:1 on the #f3f4f6 bubble — passes AA
+                color: '#4b5563',
                 fontSize: '14px',
               }}
             >
-              …
+              <span aria-hidden="true">…</span>
             </div>
           </div>
         )}
@@ -140,6 +153,7 @@ export function ChatPanel({
       </div>
 
       <InputArea
+        inputId={inputId}
         disabled={isInputDisabled}
         primaryColor={config.primaryColor}
         onSend={onSend}
