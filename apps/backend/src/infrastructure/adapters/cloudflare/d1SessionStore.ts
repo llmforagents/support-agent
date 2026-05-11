@@ -273,10 +273,18 @@ export class D1SessionStore implements SessionStorePort {
       // call, but `batch()` runs atomically per the Workers docs. Two writes:
       //   (1) insert the message
       //   (2) bump last_activity_at + total_cost_cents on the parent session
+      //
+      // We override the default `created_at = datetime('now')` (1-second
+      // resolution) with `strftime('%Y-%m-%d %H:%M:%f', 'now')` so two
+      // messages appended within the same second still order correctly
+      // under `ORDER BY created_at, id`. The string remains
+      // lexicographically comparable to plain `datetime('now')` outputs
+      // (the millisecond suffix sorts after no-fraction) and `parseSqliteDatetime`
+      // handles the `.SSS` suffix unchanged.
       const insert = this.db
         .prepare(
-          `INSERT INTO messages (id, session_id, role, content, cost_cents, rag_hits)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO messages (id, session_id, role, content, cost_cents, rag_hits, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`,
         )
         .bind(input.id, input.sessionId, input.role, input.content, input.costCents, ragHitsJson)
       const bump = this.db
