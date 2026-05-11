@@ -50,14 +50,20 @@ export class BroadcastHubDurableObject extends DurableObject {
     }
 
     if (req.method === 'GET' && url.pathname === '/subscribe') {
-      const stream = new TransformStream<Uint8Array, Uint8Array>()
+      // IdentityTransformStream is Cloudflare's no-backpressure variant.
+      // A plain TransformStream uses a highWaterMark=0 readable queue, so
+      // the very first `writer.write()` before a reader is attached never
+      // resolves and the `fetch` handler hangs — which would deadlock the
+      // worker → DO RPC awaiting this Response.
+      const stream = new IdentityTransformStream()
       const writer = stream.writable.getWriter()
       const sub: Subscriber = { writer }
       this.subscribers.add(sub)
 
       // Initial SSE comment flushes headers and confirms the connection for
-      // EventSource clients waiting on the open event.
-      await writer.write(this.encoder.encode(': connected\n\n'))
+      // EventSource clients waiting on the open event. Intentionally NOT
+      // awaited — see above.
+      void writer.write(this.encoder.encode(': connected\n\n'))
 
       req.signal.addEventListener('abort', () => {
         this.subscribers.delete(sub)
