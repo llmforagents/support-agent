@@ -219,13 +219,71 @@ export class VectorizeStore implements VectorStorePort {
     return Ok(hits)
   }
 
-  previewBySource(
-    _sourceId: SourceId,
-    _limit: number,
+  async previewBySource(
+    sourceId: SourceId,
+    limit: number,
   ): Promise<Result<readonly ChunkHit[], AppError>> {
-    // Implemented in D4.
-    return Promise.resolve(
-      Err({ kind: 'infra_db_error', cause: 'previewBySource not implemented' }),
-    )
+    // Mirrors PgvectorStore: chunks at the source's currentGeneration only,
+    // sorted by chunk_index ASC. Vectorize is not touched — preview is a
+    // text-only view of what's been ingested. score is reported as 1.0 to
+    // keep the ChunkHit contract identical between adapters (no real
+    // similarity score is available here).
+    //
+    // D1 stores SourceState as JSON, so the generation match can't be a
+    // pure SQL predicate the way it is in Postgres. We read the source's
+    // state once, then issue a parameterised chunk query bound to that
+    // generation. Unknown source ids surface as Ok([]) — matching the pg
+    // adapter, which returns no rows from its join in that case.
+    let srcRow: { state: string } | null
+    try {
+      srcRow = await this.db
+        .prepare(`SELECT state FROM sources WHERE id = ?`)
+        .bind(sourceId)
+        .first<{ state: string }>()
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+    if (!srcRow) return Ok([])
+    const stateRes = safeJsonParse<SourceState>(srcRow.state, 'sources.state')
+    if (!stateRes.ok) return stateRes
+    const currentGen = stateRes.value.currentGeneration
+
+    type Row = {
+      id: string
+      source_id: string
+      source_name: string
+      text: string
+      metadata: string
+    }
+    let rows: { results: Row[] }
+    try {
+      rows = await this.db
+        .prepare(
+          `SELECT c.id, c.source_id, c.text, c.metadata, s.name AS source_name
+           FROM chunks c
+           JOIN sources s ON s.id = c.source_id
+           WHERE c.source_id = ? AND c.ingest_generation = ?
+           ORDER BY c.chunk_index ASC
+           LIMIT ?`,
+        )
+        .bind(sourceId, currentGen, limit)
+        .all<Row>()
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+    const hits: ChunkHit[] = []
+    for (const row of rows.results) {
+      const metaRes = safeJsonParse<Record<string, unknown>>(row.metadata, 'chunks.metadata')
+      if (!metaRes.ok) return metaRes
+      hits.push({
+        id: ChunkId(row.id),
+        sourceId: SourceIdBrand(row.source_id),
+        sourceName: row.source_name,
+        text: row.text,
+        score: 1.0,
+        metadata: metaRes.value,
+      })
+    }
+    return Ok(hits)
   }
 }

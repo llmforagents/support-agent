@@ -296,4 +296,72 @@ describe('VectorizeStore @integration', () => {
       .first<{ c: number }>()
     expect(remaining?.c).toBe(1)
   })
+
+  // ── D4: previewBySource ────────────────────────────────────────────────
+
+  it('previewBySource returns current-generation chunks ordered by chunkIndex', async () => {
+    const sourceId = await createReadySource('Preview', 1)
+    // Out-of-order insert to confirm sort is by chunk_index, not insert order.
+    await store.upsertChunks([
+      makeChunk(sourceId, 2, axisVector(2), 1),
+      makeChunk(sourceId, 0, axisVector(0), 1),
+      makeChunk(sourceId, 1, axisVector(1), 1),
+    ])
+
+    const r = await store.previewBySource(SourceId(sourceId), 10)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    expect(r.value).toHaveLength(3)
+    expect(r.value[0]?.text).toBe('chunk text for index 0')
+    expect(r.value[1]?.text).toBe('chunk text for index 1')
+    expect(r.value[2]?.text).toBe('chunk text for index 2')
+    // ChunkHit shape: source name + score=1.0 + metadata defaulted.
+    expect(r.value[0]?.sourceId).toBe(sourceId)
+    expect(r.value[0]?.sourceName).toBe('Preview')
+    expect(r.value[0]?.score).toBe(1.0)
+  })
+
+  it('previewBySource respects the limit', async () => {
+    const sourceId = await createReadySource('Limited', 1)
+    await store.upsertChunks([
+      makeChunk(sourceId, 0, axisVector(0), 1),
+      makeChunk(sourceId, 1, axisVector(1), 1),
+      makeChunk(sourceId, 2, axisVector(2), 1),
+    ])
+
+    const r = await store.previewBySource(SourceId(sourceId), 2)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(2)
+  })
+
+  it('previewBySource filters out stale-generation chunks', async () => {
+    const sourceId = await createReadySource('GenFilter', 2)
+    // 2 stale (gen 0) + 3 current (gen 2)
+    await store.upsertChunks([
+      makeChunk(sourceId, 0, axisVector(0), 0),
+      makeChunk(sourceId, 1, axisVector(1), 0),
+      makeChunk(sourceId, 2, axisVector(2), 2),
+      makeChunk(sourceId, 3, axisVector(3), 2),
+      makeChunk(sourceId, 4, axisVector(4), 2),
+    ])
+
+    const r = await store.previewBySource(SourceId(sourceId), 10)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(3)
+    expect(r.value.map((h) => h.text)).toEqual([
+      'chunk text for index 2',
+      'chunk text for index 3',
+      'chunk text for index 4',
+    ])
+  })
+
+  it('previewBySource returns empty for an unknown source id', async () => {
+    const r = await store.previewBySource(SourceId('00000000-0000-4000-8000-000000000000'), 5)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.value).toHaveLength(0)
+  })
 })
