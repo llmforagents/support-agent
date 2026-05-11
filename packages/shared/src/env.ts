@@ -31,6 +31,10 @@ const EnvSchema = z
     CF_VECTORIZE_BINDING: z.string().optional(),
     CF_R2_BINDING: z.string().optional(),
     CF_DURABLE_OBJECT_BINDING: z.string().optional(),
+    // Optional Analytics Engine dataset binding for the Cloudflare
+    // metrics adapter. When unset, the CF composition falls back to
+    // `noopMetrics` (dev/test scenarios don't need the binding).
+    CF_ANALYTICS_ENGINE_BINDING: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.STORAGE_DRIVER === 'postgres' && !env.POSTGRES_URL) {

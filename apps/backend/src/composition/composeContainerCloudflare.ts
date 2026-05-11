@@ -37,6 +37,8 @@ import { Llm4AgentsLlmAdapter } from '../infrastructure/adapters/llm4agents/llmA
 import { Llm4AgentsEmbedderAdapter } from '../infrastructure/adapters/llm4agents/embedderAdapter'
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
 import type { HandoffTimeoutSchedulerHandle } from '../infrastructure/sse/handoffTimeoutScheduler'
+import { AnalyticsEngineMetrics } from '../infrastructure/observability/metricsCloudflare'
+import { noopMetrics, type MetricsPort } from '../infrastructure/observability/metrics'
 
 export type WorkerBindings = Readonly<{
   DB: D1Database
@@ -44,6 +46,11 @@ export type WorkerBindings = Readonly<{
   FILES: R2Bucket
   HUB: DurableObjectNamespace
   HANDOFF_TIMER: DurableObjectNamespace
+  // Optional Analytics Engine dataset binding (declared in wrangler.toml
+  // under `[[analytics_engine_datasets]]`). When absent — local `wrangler
+  // dev` without the binding, vitest-pool-workers, etc. — the composition
+  // wires `noopMetrics` so metric emits become no-ops.
+  METRICS?: AnalyticsEngineDataset
 }>
 
 async function pingLlm(apiBase: string): Promise<boolean> {
@@ -102,6 +109,9 @@ export async function composeContainerCloudflare(
   const broadcast = new DurableObjectBroadcast(bindings.HUB)
   const handoffTimeoutScheduler = bootHandoffTimer(bindings.HANDOFF_TIMER)
   handoffTimeoutScheduler.start()
+  const metrics: MetricsPort = bindings.METRICS
+    ? new AnalyticsEngineMetrics(bindings.METRICS)
+    : noopMetrics
 
   return {
     driver: 'cloudflare' as const,
@@ -124,6 +134,7 @@ export async function composeContainerCloudflare(
     hashPassword: hashPasswordCloudflare,
     verifyPassword: verifyPasswordCloudflare,
     logger,
+    metrics,
     healthChecks: {
       db: () => pingD1(bindings.DB),
       llm: () => pingLlm(env.LLM4AGENTS_API_BASE),

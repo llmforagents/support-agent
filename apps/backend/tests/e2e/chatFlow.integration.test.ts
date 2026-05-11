@@ -16,6 +16,7 @@ import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memory
 import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import type { Container } from '../../src/composition/container'
+import { noopMetrics } from '../../src/infrastructure/observability/metrics'
 import pino from 'pino'
 import { SessionId } from '@support/shared'
 
@@ -70,6 +71,7 @@ describe('chat flow @integration', () => {
       decrypt: (s) => decrypt(s, ENC),
       hashPassword,
       verifyPassword,
+      metrics: noopMetrics,
       healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
       shutdown: () => Promise.resolve(),
     }

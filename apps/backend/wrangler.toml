@@ -34,6 +34,14 @@ bindings = [
   { name = "HANDOFF_TIMER", class_name = "HandoffTimeoutDurableObject" },
 ]
 
+# Analytics Engine dataset for Prometheus-shaped metrics emitted via
+# `MetricsPort` -> `AnalyticsEngineMetrics`. Query the dataset with the
+# Cloudflare AE REST API; there is no scrape endpoint on the worker
+# (`/metrics` returns 404 in the Cloudflare deploy).
+[[analytics_engine_datasets]]
+binding = "METRICS"
+dataset = "support_llm4agents_metrics"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["BroadcastHubDurableObject", "HandoffTimeoutDurableObject"]
