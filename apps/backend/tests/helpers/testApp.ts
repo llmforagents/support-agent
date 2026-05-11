@@ -14,12 +14,29 @@ import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryE
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import { HandoffTimeoutScheduler } from '../../src/infrastructure/sse/handoffTimeoutScheduler'
 import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
-import { hashPassword, verifyPassword } from '../../src/infrastructure/crypto/passwordHash'
+// Use bcryptjs (pure JS) for the test helper so the same helper works in
+// both the Node pool (test:ci) and the Workers pool (test:cf). bcryptjs and
+// the native bcrypt module emit interchangeable `$2b$` hash strings, so
+// tests that pre-insert a hash with `hashPassword` and then login through
+// the route (which verifies with `c.verifyPassword`) stay correct.
+import {
+  hashPasswordCloudflare as hashPassword,
+  verifyPasswordCloudflare as verifyPassword,
+} from '../../src/infrastructure/adapters/cloudflare/cloudflarePasswordHash'
 
 const silentLogger = pino({ level: 'silent' })
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
-export function buildTestApp(): { app: Hono; container: Container } {
+export type BuildTestAppOptions = Readonly<{
+  /** Override the container's `driver` field. Defaults to `'postgres'`. */
+  driver?: 'postgres' | 'cloudflare'
+  /** Override the password hasher (cf tests use bcryptjs since native bcrypt
+   * cannot load `node:os` inside the Workers isolate). */
+  hashPassword?: (plain: string) => Promise<string>
+  verifyPassword?: (plain: string, hash: string) => Promise<boolean>
+}>
+
+export function buildTestApp(opts: BuildTestAppOptions = {}): { app: Hono; container: Container } {
   const adminStore = new MemoryAdminStore()
   const adminSessionStore = new MemoryAdminSessionStore()
   const siteConfigStore = new MemorySiteConfigStore()
@@ -44,7 +61,7 @@ export function buildTestApp(): { app: Hono; container: Container } {
   } as never
 
   const container: Container = {
-    driver: 'postgres' as const,
+    driver: opts.driver ?? 'postgres',
     env, adminStore, adminSessionStore, siteConfigStore, broadcast,
     sessionStore, llm: null as never, logger: silentLogger, sha256,
     knowledgeStore, vectorStore, fileStore, embedder,
@@ -52,8 +69,8 @@ export function buildTestApp(): { app: Hono; container: Container } {
     handoffTimeoutScheduler,
     encrypt: (s) => `enc::${s}`,
     decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s,
-    hashPassword,
-    verifyPassword,
+    hashPassword: opts.hashPassword ?? hashPassword,
+    verifyPassword: opts.verifyPassword ?? verifyPassword,
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
     shutdown: () => Promise.resolve(),
   }

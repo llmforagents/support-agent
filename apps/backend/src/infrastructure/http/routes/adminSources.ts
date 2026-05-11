@@ -61,6 +61,17 @@ export function adminSourcesRoutes(c: Container): Hono {
     const ct = ctx.req.header('content-type') ?? ''
 
     if (ct.includes('application/json')) {
+      // mysql_query branch — only available on the Postgres driver. The
+      // Cloudflare deployment has no outbound MySQL path (Workers can't
+      // open arbitrary TCP), so the JSON ingest source type is gated here.
+      // The 422 must fire BEFORE the Zod schema runs so callers don't get
+      // a schema-validation error message that masks the real reason.
+      if (c.driver === 'cloudflare') {
+        return ctx.json({
+          error: 'mysql_unsupported_on_driver',
+          detail: 'mysql_query sources are only supported with STORAGE_DRIVER=postgres',
+        }, 422)
+      }
       // mysql_query branch
       const MysqlSourceSchema = z.object({
         name: z.string().min(1).max(100),
