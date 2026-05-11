@@ -10,6 +10,7 @@ import { metricsMiddleware } from './middleware/metricsMiddleware'
 import { widgetCors, adminCors } from './middleware/cors'
 import { csrf } from './middleware/csrf'
 import { healthRoutes } from './routes/health'
+import { metricsRoutes } from './routes/metrics'
 import { adminAuthRoutes } from './routes/adminAuth'
 import { adminOnboardingRoutes } from './routes/adminOnboarding'
 import { adminConfigRoutes } from './routes/adminConfig'
@@ -74,5 +75,10 @@ export function createApp(c: Container): Hono {
   app.route('/v1/widget/sessions', widgetSessionRoutes(c))
   app.route('/v1/widget/sessions', widgetStreamRoutes(c))
   app.route('/', healthRoutes(c))
+  // Prometheus scrape endpoint — Postgres deploy only. The Cloudflare deploy
+  // pipes metrics into Analytics Engine instead and has no scrape surface.
+  if (c.driver === 'postgres') {
+    app.route('/metrics', metricsRoutes(c))
+  }
   return app
 }

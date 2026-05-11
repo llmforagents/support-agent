@@ -83,6 +83,29 @@ Enable it from **Admin → Configuración → Acceso al MCP**. The switch is **o
 
 **Roadmap.** v0.5.0 ships a single global toggle. Per-tool allowlists (e.g. "enable search but not image generation") are planned for a future release.
 
+## Metrics
+
+On the Node + Postgres deploy the backend exposes a Prometheus scrape endpoint at `/metrics`:
+
+```sh
+curl http://localhost:3001/metrics
+```
+
+The endpoint emits:
+
+- `http_requests_total{method,route,status}` and `http_request_duration_seconds{method,route}` — every request, after `requestId` and before auth so 401/403 responses are still counted. UUIDs in the path are collapsed to `:id` to bound label cardinality.
+- `chat_messages_total{role}` — visitor / assistant / system_event messages.
+- `llm_request_duration_seconds{model}` and `llm_cost_cents{model}` — LLM stream timings and cost (per the model in `site_config.agentModel`).
+- `handoff_requests_total{kind,category}` — AI-triggered handoffs (`kind=ai_decision`).
+- `handoff_timeout_reverts_total` — sessions auto-reverted from `handoff_requested` back to `active_ai` by the timeout sweeper.
+- `ingest_started_total{source_type}`, `ingest_completed_total{source_type,status}`, `ingest_duration_seconds{source_type}`, `ingest_progress_chunks{source_id}` — source ingest lifecycle (PDF / MD / TXT / mysql_query).
+
+Default histogram buckets target sub-second web latencies (5 ms → 10 s).
+
+**Security.** `/metrics` is **unauthenticated by default**. For production, put it behind a reverse-proxy basic-auth, VPN, or firewall rule — Prometheus scrape targets should not be public.
+
+**Cloudflare deploy.** Metrics are emitted to a bound Analytics Engine dataset (`METRICS` binding in `wrangler.toml`). There is no `/metrics` HTTP endpoint on Cloudflare; query the dataset via Cloudflare's Workers Analytics Engine REST API. When the binding is absent (local `wrangler dev`, vitest-pool-workers), the metrics adapter falls back to a no-op.
+
 ## Architecture
 
 - pnpm workspaces monorepo (`apps/backend`, `apps/admin`, `apps/widget`, `packages/shared`).
