@@ -11,7 +11,8 @@
     "lint": "eslint src tests --max-warnings 0",
     "test": "vitest",
     "test:ci": "vitest run --exclude '**/*.integration.test.ts'",
-    "test:integration": "vitest run integration"
+    "test:integration": "vitest run integration",
+    "test:cf": "vitest run --config tests/cloudflare/vitest.config.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
