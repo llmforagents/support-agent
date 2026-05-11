@@ -41,8 +41,8 @@ const SELECT_COLS = `id, name, host, port, database_name, user, password_encrypt
 export class D1MysqlConnectionStore implements MysqlConnectionStorePort {
   constructor(
     private readonly db: D1Database,
-    private readonly encrypt: (plaintext: string) => string,
-    private readonly decrypt: (envelope: string) => string,
+    private readonly encrypt: (plaintext: string) => Promise<string>,
+    private readonly decrypt: (envelope: string) => Promise<string>,
   ) {}
 
   async createConnection(input: {
@@ -69,7 +69,7 @@ export class D1MysqlConnectionStore implements MysqlConnectionStorePort {
           input.port,
           input.database,
           input.user,
-          this.encrypt(input.password),
+          await this.encrypt(input.password),
         )
         .run()
       if (!insertRes.success) {
@@ -129,7 +129,7 @@ export class D1MysqlConnectionStore implements MysqlConnectionStorePort {
         port: row.port,
         database: row.database_name,
         user: row.user,
-        password: this.decrypt(row.password_encrypted),
+        password: await this.decrypt(row.password_encrypted),
         ssl: false,
       })
     } catch (err) {

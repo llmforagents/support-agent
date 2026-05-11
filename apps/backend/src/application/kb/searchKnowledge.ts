@@ -6,7 +6,7 @@ export type SearchDeps = Readonly<{
   embedder: EmbedderPort
   vectorStore: VectorStorePort
   siteConfigStore: SiteConfigStorePort
-  decrypt: (envelope: string) => string
+  decrypt: (envelope: string) => Promise<string>
 }>
 
 export async function searchKnowledge(
@@ -18,7 +18,7 @@ export async function searchKnowledge(
   if (!cfg.ok) return cfg
   if (!cfg.value || !cfg.value.onboardingCompleted) return Ok([])
 
-  const apiKey = deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
+  const apiKey = await deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
   const embedRes = await deps.embedder.embed([query], apiKey)
   if (!embedRes.ok) return embedRes
 

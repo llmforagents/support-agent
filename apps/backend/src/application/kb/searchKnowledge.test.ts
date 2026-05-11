@@ -23,7 +23,7 @@ async function setup() {
     handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: false },
     adminOnline: false, onboardingStep: 9, onboardingCompleted: true,
   })
-  const decrypt = (s: string) => s.startsWith('enc::') ? s.slice(5) : s
+  const decrypt = (s: string): Promise<string> => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s)
   return { knowledgeStore, vectorStore, siteConfigStore, embedder, decrypt }
 }
 

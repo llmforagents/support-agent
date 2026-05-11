@@ -13,7 +13,7 @@ export type ChatDeps = Readonly<{
   llm: LlmPort
   embedder: EmbedderPort
   vectorStore: VectorStorePort
-  decrypt: (envelope: string) => string
+  decrypt: (envelope: string) => Promise<string>
 }>
 
 const VALID_CATEGORIES: readonly HandoffCategory[] = [
@@ -49,7 +49,7 @@ export async function handleVisitorMessage(
     .filter((m) => m.role === 'visitor' || m.role === 'assistant')
     .map((m) => ({ role: m.role === 'visitor' ? 'user' as const : 'assistant' as const, content: m.content }))
 
-  const apiKey = deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
+  const apiKey = await deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
   const systemPrompt = cfg.value.systemPrompt.replace(/\{\{siteName\}\}/g, cfg.value.siteName)
 
   const ragRes = await searchKnowledge(

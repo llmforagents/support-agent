@@ -23,8 +23,12 @@ export type Container = Readonly<{
   mysqlConnectionStore: MysqlConnectionStorePort
   handoffTimeoutScheduler: HandoffTimeoutSchedulerHandle
   sha256: (s: string) => string
-  encrypt: (plaintext: string) => string
-  decrypt: (envelope: string) => string
+  // Async because the implementation uses the Web Crypto SubtleCrypto API
+  // (`crypto.subtle.encrypt`/`decrypt`), which is the portable surface that
+  // works on both Node 20+ and Cloudflare Workers. Sync Node `createCipheriv`
+  // isn't exposed by the workerd build bundled with vitest-pool-workers 0.5.41.
+  encrypt: (plaintext: string) => Promise<string>
+  decrypt: (envelope: string) => Promise<string>
   hashPassword: (plaintext: string) => Promise<string>
   verifyPassword: (plaintext: string, hash: string) => Promise<boolean>
   logger: Logger

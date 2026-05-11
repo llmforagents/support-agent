@@ -4,7 +4,7 @@ import type { SiteConfigRow, SiteConfigStorePort } from '../ports'
 
 export type CompleteOnboardingDeps = Readonly<{
   siteConfigStore: SiteConfigStorePort
-  encrypt: (plaintext: string) => string
+  encrypt: (plaintext: string) => Promise<string>
 }>
 
 function generateSiteKey(): string {
@@ -18,7 +18,7 @@ export async function completeOnboarding(
   const existing = await deps.siteConfigStore.get()
   if (!existing.ok) return existing
   const siteKey = existing.value?.siteKey ?? generateSiteKey()
-  const encrypted = deps.encrypt(input.llm4agentsApiKey)
+  const encrypted = await deps.encrypt(input.llm4agentsApiKey)
   return deps.siteConfigStore.upsertOnboarding({
     siteKey,
     siteName: input.siteName,

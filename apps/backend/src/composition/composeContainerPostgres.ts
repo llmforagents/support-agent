@@ -37,8 +37,8 @@ export async function composeContainerPostgres(env: Env): Promise<Container> {
   await runMigrations(pool, logger)
 
   const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
-  const encrypt = (plaintext: string) => rawEncrypt(plaintext, env.ENCRYPTION_KEY)
-  const decrypt = (envelope: string) => rawDecrypt(envelope, env.ENCRYPTION_KEY)
+  const encrypt = (plaintext: string): Promise<string> => rawEncrypt(plaintext, env.ENCRYPTION_KEY)
+  const decrypt = (envelope: string): Promise<string> => rawDecrypt(envelope, env.ENCRYPTION_KEY)
 
   const sessionStore = new PgSessionStore(pool)
   const broadcast = new InProcessSseHub(logger)

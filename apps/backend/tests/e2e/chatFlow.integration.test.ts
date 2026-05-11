@@ -65,6 +65,8 @@ describe('chat flow @integration', () => {
       logger: pino({ level: 'silent' }),
       sha256,
       encrypt: (s) => encrypt(s, ENC),
+      // `encrypt`/`decrypt` are async (Web Crypto). Pass through directly —
+      // the returned Promise satisfies Container's `(s) => Promise<string>`.
       decrypt: (s) => decrypt(s, ENC),
       hashPassword,
       verifyPassword,

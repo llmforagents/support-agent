@@ -66,13 +66,46 @@ export default defineWorkersConfig({
         isolatedStorage: false,
         singleWorker: true,
         miniflare: {
+          // Compatibility date sets the baseline behaviour of the workerd
+          // runtime bundled with vitest-pool-workers (1.20241230 here).
+          // The `nodejs_compat_v2` flag exposes the full node:crypto surface
+          // (`createCipheriv`/`createDecipheriv` used by `encryption.ts`);
+          // bare `nodejs_compat` only covers a subset, but is required as a
+          // prerequisite by workerd (it errors out without it).
           compatibilityDate: '2024-12-30',
-          compatibilityFlags: ['nodejs_compat'],
+          compatibilityFlags: ['nodejs_compat', 'nodejs_compat_v2'],
           d1Databases: ['DB'],
           r2Buckets: ['FILES'],
           durableObjects: {
             HUB: 'BroadcastHubDurableObject',
             HANDOFF_TIMER: 'HandoffTimeoutDurableObject',
+          },
+          // Worker `[vars]` block — `loadEnv(env)` in `src/worker.ts` reads
+          // these via Zod (`packages/shared/src/env.ts`) on the first request
+          // through `SELF.fetch`. Adapter-only tests bypass `loadEnv` (they
+          // touch `env.DB` directly), but the H1 worker E2E goes through the
+          // full default fetch handler and needs every required var.
+          bindings: {
+            NODE_ENV: 'development',
+            PORT: '3001',
+            PUBLIC_API_URL: 'http://localhost:3001',
+            ADMIN_ORIGIN: 'http://localhost:3000',
+            LLM4AGENTS_API_BASE: 'https://api.llm4agents.com',
+            STORAGE_DRIVER: 'cloudflare',
+            FILE_STORE_PATH: './data/files',
+            ENCRYPTION_KEY: 'a'.repeat(64),
+            STREAM_TOKEN_SECRET: 'b'.repeat(64),
+            COOKIE_SECRET: 'c'.repeat(32),
+            COOKIE_SECURE: 'false',
+            LOG_LEVEL: 'error',
+            METRICS_ENABLED: 'false',
+            MAX_BODY_BYTES: '65536',
+            SSE_MAX_CONNECTIONS: '2000',
+            SSE_MAX_LIFETIME_MS: '14400000',
+            CF_D1_BINDING: 'DB',
+            CF_VECTORIZE_BINDING: 'VEC',
+            CF_R2_BINDING: 'FILES',
+            CF_DURABLE_OBJECT_BINDING: 'HUB',
           },
         },
       },

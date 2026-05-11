@@ -38,7 +38,7 @@ async function setup() {
       yield { type: 'done', usage: { promptTokens: 5, completionTokens: 2 }, costCents: UsdCents(1) }
     },
   }
-  const decrypt = (s: string) => s.startsWith('enc::') ? s.slice(5) : s
+  const decrypt = (s: string): Promise<string> => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s)
   return { sessionStore, siteConfigStore, broadcast, llm, decrypt, sessionId: session.value.id, knowledgeStore, vectorStore, embedder }
 }
 

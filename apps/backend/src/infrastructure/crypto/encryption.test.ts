@@ -4,20 +4,20 @@ import { encrypt, decrypt } from './encryption'
 const KEY = 'a'.repeat(64)
 
 describe('encryption', () => {
-  it('round-trips plaintext', () => {
-    const ct = encrypt('hello world', KEY)
+  it('round-trips plaintext', async () => {
+    const ct = await encrypt('hello world', KEY)
     expect(ct).not.toContain('hello')
-    expect(decrypt(ct, KEY)).toBe('hello world')
+    expect(await decrypt(ct, KEY)).toBe('hello world')
   })
-  it('produces different ciphertext for same plaintext (random iv)', () => {
-    expect(encrypt('x', KEY)).not.toBe(encrypt('x', KEY))
+  it('produces different ciphertext for same plaintext (random iv)', async () => {
+    expect(await encrypt('x', KEY)).not.toBe(await encrypt('x', KEY))
   })
-  it('throws on tampered ciphertext', () => {
-    const ct = encrypt('secret', KEY)
+  it('throws on tampered ciphertext', async () => {
+    const ct = await encrypt('secret', KEY)
     const tampered = ct.replace(/\.[0-9a-f]{2}/, '.00')
-    expect(() => decrypt(tampered, KEY)).toThrow()
+    await expect(decrypt(tampered, KEY)).rejects.toThrow()
   })
-  it('throws on bad key length', () => {
-    expect(() => encrypt('x', 'short')).toThrow(/key/)
+  it('throws on bad key length', async () => {
+    await expect(encrypt('x', 'short')).rejects.toThrow(/key/)
   })
 })

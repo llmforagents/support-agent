@@ -41,7 +41,7 @@ describe('ingestSource', () => {
       { text: 'c', tokenCount: 1, metadata: {} },
     ]))
     const r = await ingestSource({
-      ...env, decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s, extractChunks,
+      ...env, decrypt: (s: string) => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s), extractChunks,
     }, src.value.id)
     expect(r.ok).toBe(true)
     const after = await env.knowledgeStore.getSource(src.value.id)
@@ -56,7 +56,7 @@ describe('ingestSource', () => {
     const src = await env.knowledgeStore.createSource({ name: 'empty', sourceType: 'txt', config: { sourceType: 'txt', fileRef: 'r' } })
     if (!src.ok) throw new Error('seed')
     const r = await ingestSource({
-      ...env, decrypt: (s) => s, extractChunks: () => Promise.resolve(Ok([])),
+      ...env, decrypt: (s: string) => Promise.resolve(s), extractChunks: () => Promise.resolve(Ok([])),
     }, src.value.id)
     expect(r.ok).toBe(true)
     const after = await env.knowledgeStore.getSource(src.value.id)
@@ -70,7 +70,7 @@ describe('ingestSource', () => {
     const src = await env.knowledgeStore.createSource({ name: 'bad', sourceType: 'pdf', config: { sourceType: 'pdf', fileRef: 'r' } })
     if (!src.ok) throw new Error('seed')
     const r = await ingestSource({
-      ...env, decrypt: (s) => s,
+      ...env, decrypt: (s: string) => Promise.resolve(s),
       extractChunks: () => Promise.resolve({ ok: false, error: { kind: 'pdf_encrypted' } } as never),
     }, src.value.id)
     expect(r.ok).toBe(false)
@@ -88,7 +88,7 @@ describe('ingestSource', () => {
       currentGeneration: 0, pendingGeneration: 1,
     })
     const r = await ingestSource({
-      ...env, decrypt: (s) => s, extractChunks: () => Promise.resolve(Ok([])),
+      ...env, decrypt: (s: string) => Promise.resolve(s), extractChunks: () => Promise.resolve(Ok([])),
     }, src.value.id)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error.kind).toBe('source_invalid_state')
@@ -99,8 +99,8 @@ describe('ingestSource', () => {
     const src = await env.knowledgeStore.createSource({ name: 'd', sourceType: 'txt', config: { sourceType: 'txt', fileRef: 'r' } })
     if (!src.ok) throw new Error('seed')
     const extract = () => Promise.resolve(Ok([{ text: 'x', tokenCount: 1, metadata: {} }]))
-    await ingestSource({ ...env, decrypt: (s) => s, extractChunks: extract }, src.value.id)
-    await ingestSource({ ...env, decrypt: (s) => s, extractChunks: extract }, src.value.id)
+    await ingestSource({ ...env, decrypt: (s: string) => Promise.resolve(s), extractChunks: extract }, src.value.id)
+    await ingestSource({ ...env, decrypt: (s: string) => Promise.resolve(s), extractChunks: extract }, src.value.id)
     const after = await env.knowledgeStore.getSource(src.value.id)
     if (after.ok && after.value.state.status === 'ready') {
       expect(after.value.state.currentGeneration).toBe(2)

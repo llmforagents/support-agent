@@ -3,7 +3,7 @@ import { completeOnboarding } from './completeOnboarding'
 import { MemorySiteConfigStore } from '../../infrastructure/adapters/memory/memorySiteConfigStore'
 
 describe('completeOnboarding', () => {
-  const fakeEncrypt = (plaintext: string) => `enc::${plaintext}`
+  const fakeEncrypt = (plaintext: string): Promise<string> => Promise.resolve(`enc::${plaintext}`)
 
   it('encrypts api key before storing', async () => {
     const store = new MemorySiteConfigStore()

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { usePostgres } from '../../../../tests/helpers/pgFixture'
 import { PgMysqlConnectionStore } from './pgMysqlConnectionStore'
 
-const noopEncrypt = (s: string) => `enc::${s}`
-const noopDecrypt = (s: string) => (s.startsWith('enc::') ? s.slice(5) : s)
+const noopEncrypt = (s: string): Promise<string> => Promise.resolve(`enc::${s}`)
+const noopDecrypt = (s: string): Promise<string> => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s)
 
 const seed = () => ({
   name: 'prod-db',

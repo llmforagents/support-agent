@@ -18,7 +18,7 @@ export type IngestDeps = Readonly<{
   broadcast: BroadcastPort
   siteConfigStore: SiteConfigStorePort
   mysqlConnectionStore: MysqlConnectionStorePort
-  decrypt: (envelope: string) => string
+  decrypt: (envelope: string) => Promise<string>
   extractChunks: ExtractFn
   logger?: Logger
 }>
@@ -61,7 +61,7 @@ export async function ingestSource(deps: IngestDeps, sourceId: SourceId): Promis
   if (!cfg.ok || !cfg.value) {
     return Err({ kind: 'infra_unexpected', cause: 'site_config missing' })
   }
-  const apiKey = deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
+  const apiKey = await deps.decrypt(cfg.value.llm4agentsApiKeyEncrypted)
 
   const currentGeneration = src.state.currentGeneration
   const nextGen = currentGeneration + 1

@@ -96,8 +96,8 @@ export async function composeContainerCloudflare(
   await runD1Migrations(bindings.DB)
 
   const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex')
-  const encrypt = (plaintext: string): string => rawEncrypt(plaintext, env.ENCRYPTION_KEY)
-  const decrypt = (envelope: string): string => rawDecrypt(envelope, env.ENCRYPTION_KEY)
+  const encrypt = (plaintext: string): Promise<string> => rawEncrypt(plaintext, env.ENCRYPTION_KEY)
+  const decrypt = (envelope: string): Promise<string> => rawDecrypt(envelope, env.ENCRYPTION_KEY)
 
   const broadcast = new DurableObjectBroadcast(bindings.HUB)
   const handoffTimeoutScheduler = bootHandoffTimer(bindings.HANDOFF_TIMER)

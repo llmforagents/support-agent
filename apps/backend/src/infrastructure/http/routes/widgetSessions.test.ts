@@ -3,11 +3,12 @@ import { buildTestApp } from '../../../../tests/helpers/testApp'
 
 const VISITOR_ID = '550e8400-e29b-41d4-a716-446655440000'
 
-function setup() {
+async function setup() {
   const { app, container } = buildTestApp()
+  const encrypted = await container.encrypt('sk-proxy-xxxxxxxxxx')
   void container.siteConfigStore.upsertOnboarding({
     siteKey: 'X', siteName: 'Acme', primaryColor: '#000',
-    llm4agentsApiKeyEncrypted: container.encrypt('sk-proxy-xxxxxxxxxx'),
+    llm4agentsApiKeyEncrypted: encrypted,
     agentModel: 'm', embeddingModel: 'e', embeddingDim: 1536,
     systemPrompt: 'help', mcpEnabled: false,
     handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: false },
@@ -25,7 +26,7 @@ function setup() {
 
 describe('widget session routes', () => {
   it('POST /v1/widget/sessions creates session, returns sessionId + streamToken', async () => {
-    const { app } = setup()
+    const { app } = await setup()
     const res = await app.request('/v1/widget/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': VISITOR_ID },
@@ -38,13 +39,13 @@ describe('widget session routes', () => {
   })
 
   it('POST /v1/widget/sessions rejects without X-Visitor-Id', async () => {
-    const { app } = setup()
+    const { app } = await setup()
     const res = await app.request('/v1/widget/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
     expect(res.status).toBe(400)
   })
 
   it('POST /messages calls handleVisitorMessage and returns ok', async () => {
-    const { app } = setup()
+    const { app } = await setup()
     // Wait briefly for async upsertOnboarding to complete
     await new Promise(r => setTimeout(r, 10))
     const create = await app.request('/v1/widget/sessions', {
@@ -65,7 +66,7 @@ describe('widget session routes', () => {
   })
 
   it('POST /messages rejects content over limit', async () => {
-    const { app } = setup()
+    const { app } = await setup()
     await new Promise(r => setTimeout(r, 10))
     const create = await app.request('/v1/widget/sessions', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': VISITOR_ID }, body: '{}',

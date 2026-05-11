@@ -11,8 +11,8 @@ import { env } from 'cloudflare:test'
 import { runD1Migrations } from '../../src/infrastructure/adapters/cloudflare/d1Migrations'
 import { D1MysqlConnectionStore } from '../../src/infrastructure/adapters/cloudflare/d1MysqlConnectionStore'
 
-const noopEncrypt = (s: string) => `enc::${s}`
-const noopDecrypt = (s: string) => (s.startsWith('enc::') ? s.slice(5) : s)
+const noopEncrypt = (s: string): Promise<string> => Promise.resolve(`enc::${s}`)
+const noopDecrypt = (s: string): Promise<string> => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s)
 
 const seed = () => ({
   name: 'prod-db',

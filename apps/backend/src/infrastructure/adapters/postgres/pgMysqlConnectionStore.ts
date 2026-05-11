@@ -19,8 +19,8 @@ type DbRow = {
 export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
   constructor(
     private readonly pool: PgPool,
-    private readonly encrypt: (plaintext: string) => string,
-    private readonly decrypt: (envelope: string) => string,
+    private readonly encrypt: (plaintext: string) => Promise<string>,
+    private readonly decrypt: (envelope: string) => Promise<string>,
   ) {}
 
   async createConnection(
@@ -28,6 +28,12 @@ export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
   ): Promise<Result<MysqlConnectionRow, AppError>> {
     const id = randomUUID()
     try {
+      const [hostEnc, dbEnc, userEnc, passEnc] = await Promise.all([
+        this.encrypt(input.host),
+        this.encrypt(input.database),
+        this.encrypt(input.user),
+        this.encrypt(input.password),
+      ])
       const r = await this.pool.query<DbRow>(
         `INSERT INTO mysql_connections
            (id, name, host_encrypted, port, database_encrypted, user_encrypted, password_encrypted, ssl)
@@ -36,17 +42,17 @@ export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
         [
           id,
           input.name,
-          this.encrypt(input.host),
+          hostEnc,
           input.port,
-          this.encrypt(input.database),
-          this.encrypt(input.user),
-          this.encrypt(input.password),
+          dbEnc,
+          userEnc,
+          passEnc,
           input.ssl,
         ],
       )
       const row = r.rows[0]
       if (!row) return Err({ kind: 'infra_db_error', cause: 'no row returned' })
-      return Ok(this.toPublicRow(row))
+      return Ok(await this.toPublicRow(row))
     } catch (err) {
       return Err({ kind: 'infra_db_error', cause: String(err) })
     }
@@ -57,7 +63,8 @@ export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
       const r = await this.pool.query<DbRow>(
         `SELECT * FROM mysql_connections ORDER BY created_at DESC`,
       )
-      return Ok(r.rows.map((row) => this.toPublicRow(row)))
+      const rows = await Promise.all(r.rows.map((row) => this.toPublicRow(row)))
+      return Ok(rows)
     } catch (err) {
       return Err({ kind: 'infra_db_error', cause: String(err) })
     }
@@ -71,7 +78,7 @@ export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
       )
       const row = r.rows[0]
       if (!row) return Err({ kind: 'infra_db_error', cause: 'mysql connection not found' })
-      return Ok(this.toPublicRow(row))
+      return Ok(await this.toPublicRow(row))
     } catch (err) {
       return Err({ kind: 'infra_db_error', cause: String(err) })
     }
@@ -87,12 +94,18 @@ export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
       )
       const row = r.rows[0]
       if (!row) return Err({ kind: 'infra_db_error', cause: 'mysql connection not found' })
+      const [host, database, user, password] = await Promise.all([
+        this.decrypt(row.host_encrypted),
+        this.decrypt(row.database_encrypted),
+        this.decrypt(row.user_encrypted),
+        this.decrypt(row.password_encrypted),
+      ])
       return Ok({
-        host: this.decrypt(row.host_encrypted),
+        host,
         port: row.port,
-        database: this.decrypt(row.database_encrypted),
-        user: this.decrypt(row.user_encrypted),
-        password: this.decrypt(row.password_encrypted),
+        database,
+        user,
+        password,
         ssl: row.ssl,
       })
     } catch (err) {
@@ -109,14 +122,19 @@ export class PgMysqlConnectionStore implements MysqlConnectionStorePort {
     }
   }
 
-  private toPublicRow(row: DbRow): MysqlConnectionRow {
+  private async toPublicRow(row: DbRow): Promise<MysqlConnectionRow> {
+    const [host, database, user] = await Promise.all([
+      this.decrypt(row.host_encrypted),
+      this.decrypt(row.database_encrypted),
+      this.decrypt(row.user_encrypted),
+    ])
     return {
       id: row.id,
       name: row.name,
-      host: this.decrypt(row.host_encrypted),
+      host,
       port: row.port,
-      database: this.decrypt(row.database_encrypted),
-      user: this.decrypt(row.user_encrypted),
+      database,
+      user,
       ssl: row.ssl,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
