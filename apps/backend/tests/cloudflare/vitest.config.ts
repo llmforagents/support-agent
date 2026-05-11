@@ -20,21 +20,39 @@
 //      Since the bindings we actually need for tests are small (DB, FILES,
 //      HUB, HANDOFF_TIMER), we just declare them here.
 //
-// The `main` field points at `_doExports.ts`, a temporary entrypoint that
-// re-exports both DO classes so miniflare can resolve the `className`
-// strings in the `durableObjects` block. Section G replaces this with the
-// real worker entrypoint (`apps/backend/src/worker.ts`).
+// The `main` field points at the real worker entrypoint
+// (`apps/backend/src/worker.ts`), which re-exports both Durable Object
+// classes so miniflare can resolve the `className` strings in the
+// `durableObjects` block. Section G4 subsumed the earlier `_doExports.ts`
+// placeholder. Tests don't typically go through the worker fetch handler
+// (they instantiate adapters directly via `env.DB`, `env.HUB`, etc.); the
+// worker module only needs to load so miniflare can wire the DO namespaces.
 import { fileURLToPath } from 'node:url'
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
 
-const doExportsPath = fileURLToPath(new URL('./_doExports.ts', import.meta.url))
+const workerEntry = fileURLToPath(new URL('../../src/worker.ts', import.meta.url))
+
+// Vite plugin that loads `.sql` files as raw text strings. Mirrors the
+// `[[rules]] type = "Text"` block in wrangler.toml so plain `.sql`
+// imports work identically in tests and the production worker bundle.
+// (Vite has a built-in `?raw` query, but wrangler's esbuild doesn't —
+// so we standardise on bare `.sql` imports.)
+const sqlAsText = {
+  name: 'sql-as-text',
+  transform(code: string, id: string): { code: string; map: null } | null {
+    const path = id.split('?')[0] ?? id
+    if (!path.endsWith('.sql')) return null
+    return { code: `export default ${JSON.stringify(code)}`, map: null }
+  },
+}
 
 export default defineWorkersConfig({
+  plugins: [sqlAsText],
   test: {
     include: ['tests/cloudflare/**/*.test.ts'],
     poolOptions: {
       workers: {
-        main: doExportsPath,
+        main: workerEntry,
         // `isolatedStorage: false` + `singleWorker: true` together: we have
         // to turn off per-test storage isolation because vitest-pool-workers
         // 0.5.41's snapshot path iterates the DO persist directory and

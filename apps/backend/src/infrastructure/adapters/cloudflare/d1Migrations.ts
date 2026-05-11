@@ -5,9 +5,16 @@
 // Statements are split on `;\n` because D1's batch API does not accept
 // multi-statement strings reliably (especially for CREATE INDEX / ALTER TABLE).
 // Comments (`-- …`) at the start of a statement are tolerated by D1.
-import migration0001 from '../../../../migrations-d1/0001_init.sql?raw'
-import migration0002 from '../../../../migrations-d1/0002_kb.sql?raw'
-import migration0003 from '../../../../migrations-d1/0003_handoff_mysql.sql?raw'
+// `.sql` imports are bundled as text strings:
+//   * wrangler (production deploy): esbuild's Text loader via `[[rules]]`
+//     in `wrangler.toml` (path-only glob; doesn't tolerate `?raw` query).
+//   * vitest-pool-workers (test:cf): vite's `assetsInclude: ['**/*.sql']`
+//     in `tests/cloudflare/vitest.config.ts` makes plain `.sql` imports
+//     resolve to a raw-text default export.
+// The module declarations live in `./sql.d.ts`.
+import migration0001 from '../../../../migrations-d1/0001_init.sql'
+import migration0002 from '../../../../migrations-d1/0002_kb.sql'
+import migration0003 from '../../../../migrations-d1/0003_handoff_mysql.sql'
 
 type Migration = Readonly<{ version: string; sql: string }>
 

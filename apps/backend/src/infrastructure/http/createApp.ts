@@ -57,7 +57,13 @@ export function createApp(c: Container): Hono {
   app.route('/v1/admin/sources', adminSourcesRoutes(c))
   app.route('/v1/admin/mysql-connections', adminMysqlRoutes(c))
   app.route('/v1/admin/stream', adminStreamRoutes(c))
-  app.route('/', widgetAssetRoutes(c))
+  // Widget assets are read from disk (`node:fs`), only viable on the
+  // Node-side deployment. Cloudflare Workers will serve the widget bundle
+  // via a static binding or KV cache in Section H; until then, the routes
+  // simply aren't registered when the driver is `cloudflare`.
+  if (c.driver === 'postgres') {
+    app.route('/', widgetAssetRoutes(c))
+  }
   app.route('/v1/widget/config', widgetConfigRoutes(c))
   app.route('/v1/widget/sessions', widgetSessionRoutes(c))
   app.route('/v1/widget/sessions', widgetStreamRoutes(c))

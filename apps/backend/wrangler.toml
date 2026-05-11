@@ -40,3 +40,12 @@ new_sqlite_classes = ["BroadcastHubDurableObject", "HandoffTimeoutDurableObject"
 
 [triggers]
 crons = []  # No crons in P4; reserved for future scheduled sweeps
+
+# Bundle .sql migration files as text strings (esbuild's Text loader).
+# `d1Migrations.ts` imports `.sql` files directly without a `?raw` suffix
+# (wrangler's esbuild matches the glob on the raw path, no query strings).
+# Vitest uses its own Vite layer to handle the imports (see `sql.d.ts`).
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+fallthrough = true
