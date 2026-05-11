@@ -18,6 +18,7 @@ import { PgMysqlConnectionStore } from '../infrastructure/adapters/postgres/pgMy
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
 import { hashPassword, verifyPassword } from '../infrastructure/crypto/passwordHash'
 import { createLogger } from '../infrastructure/observability/logger'
+import { PromClientMetrics } from '../infrastructure/observability/metricsPostgres'
 
 async function pingLlm(apiBase: string): Promise<boolean> {
   try {
@@ -44,6 +45,7 @@ export async function composeContainerPostgres(env: Env): Promise<Container> {
   const broadcast = new InProcessSseHub(logger)
   const handoffTimeoutScheduler = new HandoffTimeoutScheduler(sessionStore, broadcast, logger)
   handoffTimeoutScheduler.start()
+  const metrics = new PromClientMetrics()
 
   return {
     driver: 'postgres' as const,
@@ -66,6 +68,7 @@ export async function composeContainerPostgres(env: Env): Promise<Container> {
     hashPassword,
     verifyPassword,
     logger,
+    metrics,
     healthChecks: {
       db: () => pingPool(pool),
       llm: () => pingLlm(env.LLM4AGENTS_API_BASE),
