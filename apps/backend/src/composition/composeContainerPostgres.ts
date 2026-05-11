@@ -16,6 +16,7 @@ import { HandoffTimeoutScheduler } from '../infrastructure/sse/handoffTimeoutSch
 import { Llm4AgentsLlmAdapter } from '../infrastructure/adapters/llm4agents/llmAdapter'
 import { PgMysqlConnectionStore } from '../infrastructure/adapters/postgres/pgMysqlConnectionStore'
 import { encrypt as rawEncrypt, decrypt as rawDecrypt } from '../infrastructure/crypto/encryption'
+import { hashPassword, verifyPassword } from '../infrastructure/crypto/passwordHash'
 import { createLogger } from '../infrastructure/observability/logger'
 
 async function pingLlm(apiBase: string): Promise<boolean> {
@@ -62,6 +63,8 @@ export async function composeContainerPostgres(env: Env): Promise<Container> {
     sha256,
     encrypt,
     decrypt,
+    hashPassword,
+    verifyPassword,
     logger,
     healthChecks: {
       db: () => pingPool(pool),

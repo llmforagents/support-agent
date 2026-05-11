@@ -11,7 +11,7 @@ import { PgvectorStore } from '../../src/infrastructure/adapters/postgres/pgvect
 import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
 import { HandoffTimeoutScheduler } from '../../src/infrastructure/sse/handoffTimeoutScheduler'
 import { encrypt, decrypt } from '../../src/infrastructure/crypto/encryption'
-import { hashPassword } from '../../src/infrastructure/crypto/passwordHash'
+import { hashPassword, verifyPassword } from '../../src/infrastructure/crypto/passwordHash'
 import { MemoryFileStore } from '../../src/infrastructure/adapters/memory/memoryFileStore'
 import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryEmbedder'
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
@@ -66,6 +66,8 @@ describe('chat flow @integration', () => {
       sha256,
       encrypt: (s) => encrypt(s, ENC),
       decrypt: (s) => decrypt(s, ENC),
+      hashPassword,
+      verifyPassword,
       healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
       shutdown: () => Promise.resolve(),
     }

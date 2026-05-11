@@ -4,7 +4,7 @@ import type {
   BroadcastPort, LlmPort, KnowledgeStorePort, VectorStorePort, FileStorePort, EmbedderPort,
   MysqlConnectionStorePort,
 } from '../application/ports'
-import type { HandoffTimeoutScheduler } from '../infrastructure/sse/handoffTimeoutScheduler'
+import type { HandoffTimeoutSchedulerHandle } from '../infrastructure/sse/handoffTimeoutScheduler'
 import type { Logger } from '../infrastructure/observability/logger'
 
 export type Container = Readonly<{
@@ -21,10 +21,12 @@ export type Container = Readonly<{
   fileStore: FileStorePort
   embedder: EmbedderPort
   mysqlConnectionStore: MysqlConnectionStorePort
-  handoffTimeoutScheduler: HandoffTimeoutScheduler
+  handoffTimeoutScheduler: HandoffTimeoutSchedulerHandle
   sha256: (s: string) => string
   encrypt: (plaintext: string) => string
   decrypt: (envelope: string) => string
+  hashPassword: (plaintext: string) => Promise<string>
+  verifyPassword: (plaintext: string, hash: string) => Promise<boolean>
   logger: Logger
   healthChecks: Readonly<{ db: () => Promise<boolean>; llm: () => Promise<boolean> }>
   shutdown: () => Promise<void>

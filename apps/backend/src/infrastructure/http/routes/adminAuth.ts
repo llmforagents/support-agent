@@ -9,7 +9,6 @@ import { createFirstAdmin } from '../../../application/auth/createFirstAdmin'
 import { login as loginOrch } from '../../../application/auth/login'
 import { logout as logoutOrch } from '../../../application/auth/logout'
 import { verifySession } from '../../../application/auth/verifySession'
-import { hashPassword, verifyPassword } from '../../crypto/passwordHash'
 import { AppHttpError } from '../middleware/errorHandler'
 import { rateLimit } from '../middleware/rateLimit'
 
@@ -32,7 +31,7 @@ export function adminAuthRoutes(c: Container): Hono {
   app.use('/onboarding', rateLimit({ windowMs: 60 * 60_000, max: 20, key: clientIp }))
   app.post('/onboarding', async (ctx) => {
     const body = CreateFirstAdminSchema.parse(await ctx.req.json())
-    const r = await createFirstAdmin({ adminStore: c.adminStore, hashPassword }, body)
+    const r = await createFirstAdmin({ adminStore: c.adminStore, hashPassword: c.hashPassword }, body)
     if (!r.ok) throw new AppHttpError(r.error)
     return ctx.json({ id: r.value.id, email: r.value.email })
   })
@@ -41,7 +40,7 @@ export function adminAuthRoutes(c: Container): Hono {
   app.post('/login', async (ctx) => {
     const body = LoginSchema.parse(await ctx.req.json())
     const r = await loginOrch(
-      { adminStore: c.adminStore, sessionStore: c.adminSessionStore, verifyPassword, sha256: c.sha256 },
+      { adminStore: c.adminStore, sessionStore: c.adminSessionStore, verifyPassword: c.verifyPassword, sha256: c.sha256 },
       body,
     )
     if (!r.ok) throw new AppHttpError(r.error)

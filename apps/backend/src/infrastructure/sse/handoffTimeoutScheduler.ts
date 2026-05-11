@@ -5,7 +5,17 @@ import type { Logger } from '../observability/logger'
 
 const POLL_INTERVAL_MS = 15_000
 
-export class HandoffTimeoutScheduler {
+/**
+ * Lifecycle handle held by the Container. Both the Node-side polling scheduler
+ * (this file) and the Cloudflare DO-based equivalent satisfy it; routes never
+ * read it directly — only compose `shutdown()` calls `stop()`.
+ */
+export interface HandoffTimeoutSchedulerHandle {
+  start(): void
+  stop(): void
+}
+
+export class HandoffTimeoutScheduler implements HandoffTimeoutSchedulerHandle {
   private timer: NodeJS.Timeout | null = null
 
   constructor(

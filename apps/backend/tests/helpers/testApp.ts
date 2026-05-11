@@ -14,6 +14,7 @@ import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryE
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import { HandoffTimeoutScheduler } from '../../src/infrastructure/sse/handoffTimeoutScheduler'
 import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
+import { hashPassword, verifyPassword } from '../../src/infrastructure/crypto/passwordHash'
 
 const silentLogger = pino({ level: 'silent' })
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
@@ -51,6 +52,8 @@ export function buildTestApp(): { app: Hono; container: Container } {
     handoffTimeoutScheduler,
     encrypt: (s) => `enc::${s}`,
     decrypt: (s) => s.startsWith('enc::') ? s.slice(5) : s,
+    hashPassword,
+    verifyPassword,
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
     shutdown: () => Promise.resolve(),
   }
