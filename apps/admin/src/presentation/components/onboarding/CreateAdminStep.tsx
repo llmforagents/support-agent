@@ -37,7 +37,7 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">{t('createAdmin.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t('createAdmin.description')}</p>
+        <p className="mt-1 text-sm text-gray-700">{t('createAdmin.description')}</p>
       </div>
       <form
         onSubmit={(e) => { void handleSubmit(e) }}
@@ -48,6 +48,7 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
           <Input
             id="ca-email"
             type="email"
+            autoComplete="email"
             required
             value={email}
             onChange={(e) => { setEmail(e.target.value) }}
@@ -58,12 +59,15 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
           <Input
             id="ca-password"
             type="password"
+            autoComplete="new-password"
             required
             minLength={8}
+            aria-describedby="ca-password-hint"
             value={password}
             onChange={(e) => { setPassword(e.target.value) }}
           />
-          <p className="text-xs text-gray-400">{t('createAdmin.passwordHint')}</p>
+          {/* gray-700 = 8:1 on white. gray-400 (2.9:1) was failing AA. */}
+          <p id="ca-password-hint" className="text-xs text-gray-700">{t('createAdmin.passwordHint')}</p>
         </div>
         {error !== null && (
           <p role="alert" className="text-sm text-red-600">{error}</p>

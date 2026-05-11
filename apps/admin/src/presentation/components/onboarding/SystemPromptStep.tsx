@@ -55,7 +55,7 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">{t('systemPrompt.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t('systemPrompt.description')}</p>
+        <p className="mt-1 text-sm text-gray-700">{t('systemPrompt.description')}</p>
       </div>
       <form
         onSubmit={(e) => { void handleSubmit(e) }}
@@ -71,9 +71,12 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
             rows={8}
             value={systemPrompt}
             onChange={(e) => { setSystemPrompt(e.target.value) }}
-            className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-describedby="sp-counter"
+            className="flex w-full rounded-md border border-gray-400 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <p className="text-xs text-gray-400">{systemPrompt.length}/8000 {t('systemPrompt.charCount')}</p>
+          <p id="sp-counter" role="status" aria-live="polite" className="text-xs text-gray-700">
+            {systemPrompt.length}/8000 {t('systemPrompt.charCount')}
+          </p>
         </div>
         {error !== null && (
           <p role="alert" className="text-sm text-red-600">{error}</p>

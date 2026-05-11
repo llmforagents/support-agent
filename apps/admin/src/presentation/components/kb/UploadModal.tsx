@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ChangeEvent } from 'react'
+import { useState, useEffect, useId, useRef, type FormEvent, type ChangeEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/infrastructure/apiClient'
 import { Button } from '@/presentation/components/ui/button'
@@ -13,6 +13,13 @@ export function UploadModal({ onClose }: { readonly onClose: () => void }): Reac
   const [name, setName] = useState('')
   const [type, setType] = useState<'pdf' | 'md' | 'txt'>('pdf')
   const [error, setError] = useState<string | null>(null)
+  const titleId = useId()
+  const fileId = useId()
+  const nameId = useId()
+  const typeId = useId()
+  const errorId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<Element | null>(null)
 
   const upload = useMutation({
     mutationFn: () => {
@@ -27,6 +34,30 @@ export function UploadModal({ onClose }: { readonly onClose: () => void }): Reac
       setError(err instanceof Error ? err.message : 'upload failed')
     },
   })
+
+  // Focus management: capture previously focused element on mount, restore on unmount.
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement
+    // Focus the first focusable element inside the dialog
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'input, select, textarea, button',
+    )
+    firstFocusable?.focus()
+    return () => {
+      if (previousFocusRef.current instanceof HTMLElement) {
+        previousFocusRef.current.focus()
+      }
+    }
+  }, [])
+
+  // ESC closes the dialog
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [onClose])
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const f = e.currentTarget.files?.[0] ?? null
@@ -46,44 +77,54 @@ export function UploadModal({ onClose }: { readonly onClose: () => void }): Reac
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    >
       <Card className="w-full max-w-md space-y-4 p-6">
-        <h2 className="text-xl font-semibold">{t('kb.upload.title')}</h2>
+        <h2 id={titleId} className="text-xl font-semibold text-zinc-900">
+          {t('kb.upload.title')}
+        </h2>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <Label htmlFor="kb-file">{t('kb.upload.file')}</Label>
+            <Label htmlFor={fileId}>{t('kb.upload.file')}</Label>
             <input
-              id="kb-file"
+              id={fileId}
               type="file"
               accept=".pdf,.md,.markdown,.txt"
               onChange={onFileChange}
-              className="mt-1 block w-full rounded border border-zinc-300 bg-white p-2 text-sm"
+              className="mt-1 block w-full rounded border border-zinc-400 bg-white p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
               required
             />
           </div>
           <div>
-            <Label htmlFor="kb-name">{t('kb.upload.name')}</Label>
+            <Label htmlFor={nameId}>{t('kb.upload.name')}</Label>
             <Input
-              id="kb-name"
+              id={nameId}
               value={name}
               onChange={(e) => { setName(e.currentTarget.value) }}
               required
             />
           </div>
           <div>
-            <Label htmlFor="kb-type">{t('kb.upload.type')}</Label>
+            <Label htmlFor={typeId}>{t('kb.upload.type')}</Label>
             <select
-              id="kb-type"
+              id={typeId}
               value={type}
               onChange={(e) => { setType(e.currentTarget.value as 'pdf' | 'md' | 'txt') }}
-              className="mt-1 block w-full rounded border border-zinc-300 bg-white p-2 text-sm"
+              className="mt-1 block w-full rounded border border-zinc-400 bg-white p-2 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             >
               <option value="pdf">PDF</option>
               <option value="md">Markdown</option>
               <option value="txt">Plain text</option>
             </select>
           </div>
-          {error !== null && <p className="text-sm text-red-600">{error}</p>}
+          {error !== null && (
+            <p id={errorId} role="alert" className="text-sm text-red-700">{error}</p>
+          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
               {t('common.cancel')}

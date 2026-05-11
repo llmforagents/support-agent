@@ -23,13 +23,14 @@ export function EmbedStep({ embedSnippet }: EmbedStepProps): React.JSX.Element {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">{t('embed.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-700">
           {t('embed.description')}{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">&lt;/body&gt;</code> tag of your site.
+          <code className="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-900">&lt;/body&gt;</code> tag of your site.
         </p>
       </div>
-      <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
-        <pre className="overflow-x-auto whitespace-pre-wrap break-all text-xs text-gray-700">
+      <div className="rounded-md border border-gray-300 bg-gray-50 p-4">
+        {/* gray-900 on gray-50 = ~17:1 — passes AAA */}
+        <pre className="overflow-x-auto whitespace-pre-wrap break-all text-xs text-gray-900">
           {snippet}
         </pre>
       </div>

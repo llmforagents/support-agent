@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/presentation/hooks/useAuth'
 import { Button } from '@/presentation/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/presentation/components/ui/card'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
 import { ApiError } from '@/infrastructure/apiClient'
@@ -15,6 +15,9 @@ export function Login(): React.JSX.Element {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const emailId = useId()
+  const passwordId = useId()
+  const errorId = useId()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
@@ -35,10 +38,13 @@ export function Login(): React.JSX.Element {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{t('login.title')}</CardTitle>
+          {/* h1 — page-level title. CardTitle defaults to h3, which would skip levels. */}
+          <h1 className="text-lg font-semibold leading-none tracking-tight text-gray-900">
+            {t('login.title')}
+          </h1>
           <CardDescription>{t('login.description')}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -47,31 +53,36 @@ export function Login(): React.JSX.Element {
               void handleSubmit(e)
             }}
             className="space-y-4"
+            noValidate
           >
             <div className="space-y-2">
-              <Label htmlFor="email">{t('login.email')}</Label>
+              <Label htmlFor={emailId}>{t('login.email')}</Label>
               <Input
-                id="email"
+                id={emailId}
                 type="email"
                 autoComplete="email"
                 required
+                aria-invalid={error !== null}
+                aria-describedby={error !== null ? errorId : undefined}
                 value={email}
                 onChange={(e) => { setEmail(e.target.value) }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t('login.password')}</Label>
+              <Label htmlFor={passwordId}>{t('login.password')}</Label>
               <Input
-                id="password"
+                id={passwordId}
                 type="password"
                 autoComplete="current-password"
                 required
+                aria-invalid={error !== null}
+                aria-describedby={error !== null ? errorId : undefined}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value) }}
               />
             </div>
             {error !== null && (
-              <p role="alert" className="text-sm text-red-600">
+              <p id={errorId} role="alert" className="text-sm text-red-700">
                 {error}
               </p>
             )}
@@ -81,6 +92,6 @@ export function Login(): React.JSX.Element {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   )
 }

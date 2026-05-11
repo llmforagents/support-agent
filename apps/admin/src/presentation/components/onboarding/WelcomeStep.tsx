@@ -10,7 +10,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps): React.JSX.Element {
     <div className="space-y-6 text-center">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">{t('welcome.title')}</h2>
-        <p className="mt-2 text-gray-500">{t('welcome.description')}</p>
+        <p className="mt-2 text-gray-700">{t('welcome.description')}</p>
       </div>
       <ul className="space-y-2 text-left text-sm text-gray-600">
         <li className="flex items-start gap-2">

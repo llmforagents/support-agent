@@ -26,7 +26,7 @@ export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Eleme
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">{t('siteConfig.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t('siteConfig.description')}</p>
+        <p className="mt-1 text-sm text-gray-700">{t('siteConfig.description')}</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -48,9 +48,12 @@ export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Eleme
               type="color"
               value={primaryColor}
               onChange={(e) => { setPrimaryColor(e.target.value) }}
-              className="h-10 w-12 cursor-pointer rounded border border-gray-300 p-1"
+              aria-label={t('siteConfig.primaryColor')}
+              className="h-10 w-12 cursor-pointer rounded border border-gray-400 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             />
+            <Label htmlFor="sc-color-hex" className="sr-only">{t('siteConfig.primaryColor')}</Label>
             <Input
+              id="sc-color-hex"
               type="text"
               value={primaryColor}
               onChange={(e) => { setPrimaryColor(e.target.value) }}

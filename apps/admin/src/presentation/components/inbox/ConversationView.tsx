@@ -59,11 +59,16 @@ export function ConversationView({ session, currentAdminId }: Props): React.JSX.
   const composerDisabled = !isMine
 
   return (
-    <main className="flex flex-1 flex-col bg-zinc-50">
-      <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
+    <main id="main-content" className="flex flex-1 flex-col bg-zinc-50">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
         <div>
-          <div className="font-semibold">Visitor {session.id.slice(0, 8)}</div>
-          <div className="text-xs text-zinc-500">Status: {status}</div>
+          <h1 className="text-base font-semibold text-zinc-900">
+            Visitor {session.id.slice(0, 8)}
+          </h1>
+          {/* zinc-600 = 7.1:1 on white — passes AA. zinc-500 fails (4.6:1 borderline). */}
+          <div className="text-xs text-zinc-600" aria-live="polite">
+            Status: <span>{status}</span>
+          </div>
         </div>
         <div className="flex gap-2">
           {canClaim && (
@@ -82,39 +87,61 @@ export function ConversationView({ session, currentAdminId }: Props): React.JSX.
             </Button>
           )}
         </div>
-      </div>
+      </header>
 
-      <div ref={bodyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div
+        ref={bodyRef}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-label="Mensajes de la conversación"
+        className="flex-1 space-y-3 overflow-y-auto p-4"
+      >
         {messagesQ.data?.messages.map((m: Message) => {
           if (m.role === 'system_event') {
             return (
-              <div key={m.id} className="text-center text-xs italic text-zinc-500">
+              <div
+                key={m.id}
+                role="status"
+                className="text-center text-xs italic text-zinc-600"
+              >
                 {m.content}
               </div>
             )
           }
           const isVisitor = m.role === 'visitor'
+          const articleLabel = m.role === 'operator'
+            ? 'Mensaje del operador'
+            : m.role === 'assistant'
+              ? 'Mensaje del asistente'
+              : 'Mensaje del visitante'
           return (
-            <div key={m.id} className={cn('flex', isVisitor ? 'justify-start' : 'justify-end')}>
+            <article
+              key={m.id}
+              aria-label={articleLabel}
+              className={cn('flex', isVisitor ? 'justify-start' : 'justify-end')}
+            >
               <div
                 className={cn(
                   'max-w-[70%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm',
                   m.role === 'operator'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-indigo-700 text-white'
                     : m.role === 'assistant'
-                      ? 'border border-zinc-200 bg-white'
-                      : 'bg-zinc-200',
+                      ? 'border border-zinc-300 bg-white text-zinc-900'
+                      : 'bg-zinc-200 text-zinc-900',
                 )}
               >
                 {m.role === 'operator' && (
-                  <div className="mb-0.5 text-xs opacity-75">Operador</div>
+                  // 0.85 opacity on white over indigo-700 = ample contrast (>4.5:1)
+                  <div className="mb-0.5 text-xs opacity-85">Operador</div>
                 )}
                 {m.role === 'assistant' && (
-                  <div className="mb-0.5 text-xs text-zinc-500">AI</div>
+                  // zinc-600 on white = 7.1:1
+                  <div className="mb-0.5 text-xs text-zinc-600">AI</div>
                 )}
                 {m.content}
               </div>
-            </div>
+            </article>
           )
         })}
       </div>

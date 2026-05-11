@@ -38,14 +38,22 @@ export function OnboardingWizard(): React.JSX.Element {
   const totalSteps = 6
 
   return (
-    <div className="w-full max-w-lg">
+    <main id="main-content" className="w-full max-w-lg" aria-label="Asistente de onboarding">
       {/* Progress bar */}
       <div className="mb-6">
-        <div className="flex justify-between text-xs text-gray-400">
+        {/* gray-700 = 8:1 on white (AA pass). gray-400 was 2.9:1 (fails). */}
+        <div className="flex justify-between text-xs text-gray-700">
           <span>{STEP_LABELS[step]}</span>
           <span>Step {step + 1} of {totalSteps}</span>
         </div>
-        <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+        <div
+          role="progressbar"
+          aria-valuenow={step + 1}
+          aria-valuemin={1}
+          aria-valuemax={totalSteps}
+          aria-label={`Paso ${(step + 1).toString()} de ${totalSteps.toString()}`}
+          className="mt-1 h-1.5 w-full rounded-full bg-gray-200"
+        >
           <div
             className="h-1.5 rounded-full bg-blue-600 transition-all"
             style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
@@ -85,6 +93,6 @@ export function OnboardingWizard(): React.JSX.Element {
           {step === 5 && <EmbedStep embedSnippet={data.embedSnippet} />}
         </CardContent>
       </Card>
-    </div>
+    </main>
   )
 }

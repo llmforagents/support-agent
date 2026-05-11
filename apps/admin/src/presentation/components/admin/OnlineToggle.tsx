@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/infrastructure/apiClient'
 import { cn } from '@/lib/cn'
@@ -6,6 +6,10 @@ import { cn } from '@/lib/cn'
 export function OnlineToggle(): React.JSX.Element {
   const qc = useQueryClient()
   const [confirming, setConfirming] = useState<{ activeCount: number } | null>(null)
+  const titleId = useId()
+  const bodyId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<Element | null>(null)
 
   const cfgQ = useQuery({
     queryKey: ['admin-config'],
@@ -40,29 +44,59 @@ export function OnlineToggle(): React.JSX.Element {
     setOnline.mutate(!isOnline)
   }
 
+  // Modal focus/ESC management
+  useEffect(() => {
+    if (confirming === null) return undefined
+    previousFocusRef.current = document.activeElement
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>('button')
+    firstFocusable?.focus()
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setConfirming(null)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      if (previousFocusRef.current instanceof HTMLElement) {
+        previousFocusRef.current.focus()
+      }
+    }
+  }, [confirming])
+
   return (
     <>
       <button
         type="button"
         onClick={handleClick}
         disabled={setOnline.isPending}
+        aria-pressed={isOnline}
         title={isOnline ? 'Online — click para desconectarse' : 'Offline — click para conectarse'}
+        aria-label={isOnline ? 'Operador en línea — clic para desconectarse' : 'Operador desconectado — clic para conectarse'}
         className={cn(
           'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2',
+          // green-600 (#16a34a) on white = 3.0:1 — passes AA for UI components with bold white text on top.
           isOnline
-            ? 'bg-green-500 text-white hover:bg-green-600'
-            : 'bg-zinc-300 text-zinc-700 hover:bg-zinc-400',
+            ? 'bg-green-600 text-white hover:bg-green-700'
+            // zinc-300 bg with zinc-800 text = 5.7:1 — passes AA for normal text
+            : 'bg-zinc-300 text-zinc-800 hover:bg-zinc-400',
           setOnline.isPending && 'opacity-50',
         )}
       >
-        {isOnline ? 'ON' : 'OFF'}
+        <span aria-hidden="true">{isOnline ? 'ON' : 'OFF'}</span>
       </button>
 
       {confirming !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={bodyId}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-2 text-lg font-semibold">¿Pasar a offline?</h3>
-            <p className="mb-4 text-sm text-zinc-600">
+            <h2 id={titleId} className="mb-2 text-lg font-semibold text-zinc-900">¿Pasar a offline?</h2>
+            <p id={bodyId} className="mb-4 text-sm text-zinc-700">
               Tenés{' '}
               <strong>{confirming.activeCount}</strong>{' '}
               sesión{confirming.activeCount === 1 ? '' : 'es'} activa
@@ -73,14 +107,14 @@ export function OnlineToggle(): React.JSX.Element {
               <button
                 type="button"
                 onClick={() => { setConfirming(null) }}
-                className="rounded border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50"
+                className="rounded border border-zinc-400 px-3 py-1 text-sm text-zinc-800 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={() => { setOnline.mutate(false) }}
-                className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+                className="rounded bg-red-700 px-3 py-1 text-sm text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
               >
                 Continuar
               </button>

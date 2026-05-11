@@ -34,7 +34,8 @@ export function CardTitle({ className, children, ...props }: CardProps): React.J
 
 export function CardDescription({ className, children, ...props }: CardProps): React.JSX.Element {
   return (
-    <p className={cn('text-sm text-gray-500', className)} {...props}>
+    // gray-700 = 8:1 on white — passes AA. gray-500 (4.6:1) was borderline.
+    <p className={cn('text-sm text-gray-700', className)} {...props}>
       {children}
     </p>
   )

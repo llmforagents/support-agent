@@ -132,6 +132,14 @@ const messages = {
   // ── Common ─────────────────────────────────────────────────────────────────
   'common.cancel': 'Cancelar',
   'common.confirm': 'Confirmar',
+  'common.close': 'Cerrar',
+  'common.loading': 'Cargando…',
+
+  // ── Accessibility ──────────────────────────────────────────────────────────
+  'a11y.skipToContent': 'Saltar al contenido',
+  'a11y.primaryNav': 'Navegación principal',
+  'a11y.closeModal': 'Cerrar diálogo',
+  'a11y.appRegion': 'Aplicación de soporte',
 } as const
 
 export default messages

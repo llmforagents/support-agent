@@ -26,7 +26,7 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900">{t('connectAgent.title')}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t('connectAgent.description')}</p>
+        <p className="mt-1 text-sm text-gray-700">{t('connectAgent.description')}</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -34,18 +34,22 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
           <Input
             id="ca-api-key"
             type="password"
+            autoComplete="off"
             required
             placeholder={t('connectAgent.apiKeyPlaceholder')}
+            aria-describedby="ca-api-key-hint"
             value={apiKey}
             onChange={(e) => { setApiKey(e.target.value) }}
           />
-          <p className="text-xs text-gray-400">
+          {/* gray-700 = 8:1 on white — passes AA. gray-400 was failing. */}
+          <p id="ca-api-key-hint" className="text-xs text-gray-700">
             {t('connectAgent.apiKeyHint')}{' '}
             <a
               href="https://llm4agents.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              // blue-700 = 5.9:1 on white — comfortable AA for link text
+              className="text-blue-700 underline hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
             >
               llm4agents.com
             </a>

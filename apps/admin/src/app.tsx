@@ -11,7 +11,7 @@ function RequireAuth({ children }: { readonly children: React.JSX.Element }): Re
   if (auth.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <span className="text-sm text-gray-400">Loading…</span>
+        <span role="status" aria-live="polite" className="text-sm text-gray-600">Loading…</span>
       </div>
     )
   }
@@ -26,7 +26,7 @@ function BootRedirect(): React.JSX.Element {
   if (auth.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <span className="text-sm text-gray-400">Loading…</span>
+        <span role="status" aria-live="polite" className="text-sm text-gray-600">Loading…</span>
       </div>
     )
   }

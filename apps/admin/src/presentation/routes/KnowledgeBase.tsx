@@ -47,11 +47,17 @@ export function KnowledgeBase(): React.JSX.Element {
 
   return (
     <div className="flex h-screen bg-zinc-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:text-blue-700 focus:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+      >
+        {t('a11y.skipToContent')}
+      </a>
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+      <main id="main-content" className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-4xl space-y-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">{t('kb.title')}</h1>
+            <h1 className="text-2xl font-semibold text-zinc-900">{t('kb.title')}</h1>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => { setMysqlModalOpen(true) }}>
                 Conectar MySQL
@@ -60,12 +66,15 @@ export function KnowledgeBase(): React.JSX.Element {
             </div>
           </div>
           {hasError && (
-            <div className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+            <div
+              role="alert"
+              className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900"
+            >
               {t('kb.errorBanner')}
             </div>
           )}
           {sources.length === 0 ? (
-            <Card className="p-8 text-center text-zinc-500">
+            <Card className="p-8 text-center text-zinc-600">
               {t('kb.empty')}
             </Card>
           ) : (
@@ -73,8 +82,8 @@ export function KnowledgeBase(): React.JSX.Element {
               {sources.map((s) => (
                 <div key={s.id} className="flex items-center justify-between gap-3 p-4">
                   <div className="flex-1">
-                    <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-zinc-500">
+                    <div className="font-medium text-zinc-900">{s.name}</div>
+                    <div className="text-xs text-zinc-600">
                       {s.sourceType.toUpperCase()} · status:{' '}
                       <strong>{s.state.status}</strong>
                     </div>
@@ -83,7 +92,14 @@ export function KnowledgeBase(): React.JSX.Element {
                     <button
                       type="button"
                       onClick={() => { setActive.mutate({ id: s.id, active: !s.active }) }}
-                      className={s.active ? 'text-indigo-600' : 'text-zinc-400'}
+                      aria-pressed={s.active}
+                      aria-label={`${s.name}: ${s.active ? t('kb.activeOn') : t('kb.activeOff')}`}
+                      className={[
+                        'rounded px-2 py-0.5 text-sm font-medium',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1',
+                        // indigo-700 (#4338ca) = 8.5:1; zinc-600 = 7.1:1. Both pass AA.
+                        s.active ? 'text-indigo-700' : 'text-zinc-600',
+                      ].join(' ')}
                     >
                       {s.active ? t('kb.activeOn') : t('kb.activeOff')}
                     </button>

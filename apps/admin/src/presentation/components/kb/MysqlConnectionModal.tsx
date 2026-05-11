@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, useId, useRef, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/infrastructure/apiClient'
 import { Card } from '@/presentation/components/ui/card'
@@ -38,6 +38,16 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
     ssl: true,
   })
   const [error, setError] = useState<string | null>(null)
+  const titleId = useId()
+  const nameId = useId()
+  const hostId = useId()
+  const portId = useId()
+  const dbId = useId()
+  const userId = useId()
+  const passId = useId()
+  const sslId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<Element | null>(null)
 
   const create = useMutation({
     mutationFn: () => apiClient.mysqlConnectionCreate(form),
@@ -50,6 +60,25 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
     },
   })
 
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>('input')
+    firstFocusable?.focus()
+    return () => {
+      if (previousFocusRef.current instanceof HTMLElement) {
+        previousFocusRef.current.focus()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [onClose])
+
   const submit = (e: FormEvent): void => {
     e.preventDefault()
     setError(null)
@@ -57,32 +86,38 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    >
       <Card className="w-full max-w-md space-y-4 p-6">
-        <h2 className="text-xl font-semibold">Conectar MySQL</h2>
+        <h2 id={titleId} className="text-xl font-semibold text-zinc-900">Conectar MySQL</h2>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <Label htmlFor="mc-name">Nombre</Label>
+            <Label htmlFor={nameId}>Nombre</Label>
             <Input
-              id="mc-name"
+              id={nameId}
               value={form.name}
               onChange={(e) => { setForm({ ...form, name: e.currentTarget.value }) }}
               required
             />
           </div>
           <div>
-            <Label htmlFor="mc-host">Host</Label>
+            <Label htmlFor={hostId}>Host</Label>
             <Input
-              id="mc-host"
+              id={hostId}
               value={form.host}
               onChange={(e) => { setForm({ ...form, host: e.currentTarget.value }) }}
               required
             />
           </div>
           <div>
-            <Label htmlFor="mc-port">Puerto</Label>
+            <Label htmlFor={portId}>Puerto</Label>
             <Input
-              id="mc-port"
+              id={portId}
               type="number"
               value={form.port}
               onChange={(e) => { setForm({ ...form, port: Number(e.currentTarget.value) }) }}
@@ -92,44 +127,46 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
             />
           </div>
           <div>
-            <Label htmlFor="mc-db">Base de datos</Label>
+            <Label htmlFor={dbId}>Base de datos</Label>
             <Input
-              id="mc-db"
+              id={dbId}
               value={form.database}
               onChange={(e) => { setForm({ ...form, database: e.currentTarget.value }) }}
               required
             />
           </div>
           <div>
-            <Label htmlFor="mc-user">Usuario</Label>
+            <Label htmlFor={userId}>Usuario</Label>
             <Input
-              id="mc-user"
+              id={userId}
               value={form.user}
               onChange={(e) => { setForm({ ...form, user: e.currentTarget.value }) }}
+              autoComplete="off"
               required
             />
           </div>
           <div>
-            <Label htmlFor="mc-pass">Contraseña</Label>
+            <Label htmlFor={passId}>Contraseña</Label>
             <Input
-              id="mc-pass"
+              id={passId}
               type="password"
               value={form.password}
               onChange={(e) => { setForm({ ...form, password: e.currentTarget.value }) }}
+              autoComplete="new-password"
               required
             />
           </div>
           <div className="flex items-center gap-2">
             <input
-              id="mc-ssl"
+              id={sslId}
               type="checkbox"
               checked={form.ssl}
               onChange={(e) => { setForm({ ...form, ssl: e.currentTarget.checked }) }}
-              className="h-4 w-4 rounded border-zinc-300"
+              className="h-4 w-4 rounded border-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             />
-            <Label htmlFor="mc-ssl">SSL</Label>
+            <Label htmlFor={sslId}>SSL</Label>
           </div>
-          {error !== null && <p className="text-sm text-red-600">{error}</p>}
+          {error !== null && <p role="alert" className="text-sm text-red-700">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar

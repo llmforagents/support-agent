@@ -14,7 +14,10 @@ const items: readonly Item[] = [
 export function Sidebar(): React.JSX.Element {
   const { pathname } = useLocation()
   return (
-    <aside className="flex w-16 flex-col items-center gap-4 border-r border-zinc-200 bg-white py-4">
+    <nav
+      aria-label={t('a11y.primaryNav')}
+      className="flex w-16 flex-col items-center gap-4 border-r border-zinc-200 bg-white py-4"
+    >
       <OnlineToggle />
       {items.map((it) => {
         const label = t(it.labelKey)
@@ -28,15 +31,19 @@ export function Sidebar(): React.JSX.Element {
             aria-current={active ? 'page' : undefined}
             className={cn(
               'rounded-md p-2 transition-colors',
+              // Focus ring — passes AA for UI components (blue-600 = 4.6:1)
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2',
               active
-                ? 'bg-indigo-50 text-indigo-600'
-                : 'text-zinc-400 hover:bg-zinc-100',
+                // indigo-600 on indigo-50 stays high-contrast for the active state
+                ? 'bg-indigo-50 text-indigo-700'
+                // zinc-600 (#52525b) = 7.1:1 on white — passes AA. zinc-400 (3.3:1) was failing.
+                : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
             )}
           >
             <span aria-hidden="true">{it.icon}</span>
           </Link>
         )
       })}
-    </aside>
+    </nav>
   )
 }

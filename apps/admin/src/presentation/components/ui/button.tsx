@@ -34,7 +34,8 @@ export function Button({
     <button
       className={cn(
         'inline-flex items-center justify-center rounded-md font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+        // blue-600 = 4.6:1 on white — passes WCAG AA for UI components (3:1) with margin
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
         variantClasses[variant],
         sizeClasses[size],

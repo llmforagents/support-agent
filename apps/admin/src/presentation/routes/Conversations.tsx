@@ -7,6 +7,7 @@ import { Sidebar } from '@/presentation/components/Sidebar'
 import { SessionList } from '@/presentation/components/inbox/SessionList'
 import { ConversationView } from '@/presentation/components/inbox/ConversationView'
 import { ContextPanel } from '@/presentation/components/inbox/ContextPanel'
+import { t } from '@/lib/i18n'
 
 type StatusFilter = 'all' | 'handoff_requested' | 'active_operator' | 'active_ai'
 
@@ -55,6 +56,12 @@ export function Conversations(): React.JSX.Element {
 
   return (
     <div className="flex h-screen bg-zinc-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:text-blue-700 focus:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+      >
+        {t('a11y.skipToContent')}
+      </a>
       <Sidebar />
       <SessionList
         sessions={sessions}
@@ -66,8 +73,13 @@ export function Conversations(): React.JSX.Element {
       {selectedSessionQ.data !== undefined ? (
         <ConversationView session={selectedSessionQ.data} currentAdminId={adminId} />
       ) : (
-        <main className="flex flex-1 items-center justify-center text-zinc-400">
-          {selectedId !== null ? 'Cargando…' : 'Seleccioná una sesión.'}
+        <main
+          id="main-content"
+          className="flex flex-1 items-center justify-center text-zinc-600"
+        >
+          <p role="status" aria-live="polite">
+            {selectedId !== null ? 'Cargando…' : 'Seleccioná una sesión.'}
+          </p>
         </main>
       )}
       <ContextPanel session={selectedSessionQ.data ?? null} />
