@@ -66,6 +66,13 @@ export class PgSiteConfigStore implements SiteConfigStorePort {
     } catch (err) { return Err({ kind: 'infra_db_error', cause: String(err) }) }
   }
 
+  async setMcpEnabled(enabled: boolean): Promise<Result<void, AppError>> {
+    try {
+      await this.pool.query(`UPDATE site_config SET mcp_enabled = $1, updated_at = NOW() WHERE id = 1`, [enabled])
+      return Ok(undefined)
+    } catch (err) { return Err({ kind: 'infra_db_error', cause: String(err) }) }
+  }
+
   async setOnboardingStep(step: number, completed: boolean): Promise<Result<void, AppError>> {
     try {
       await this.pool.query(`UPDATE site_config SET onboarding_step = $1, onboarding_completed = $2, updated_at = NOW() WHERE id = 1`, [step, completed])
