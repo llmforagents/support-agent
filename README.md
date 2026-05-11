@@ -1,7 +1,7 @@
 # support-llm4agents
 
 [![CI](https://github.com/<your-org>/support-llm4agents/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/support-llm4agents/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](.nvmrc)
 
 Open-source AI support agent for any website. Drop-in floating chat widget powered by your llm4agents account, with knowledge-base RAG (P2), human handoff (P3), and a clean admin dashboard.
@@ -134,4 +134,4 @@ Integration tests use `@testcontainers/postgresql` — Docker is required.
 
 ## License
 
-MIT — see LICENSE.
+Apache 2.0 — see LICENSE and NOTICE.
