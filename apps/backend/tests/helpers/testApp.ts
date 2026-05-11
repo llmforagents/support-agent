@@ -14,6 +14,7 @@ import { MemoryEmbedder } from '../../src/infrastructure/adapters/memory/memoryE
 import { MemoryMysqlConnectionStore } from '../../src/infrastructure/adapters/memory/memoryMysqlConnectionStore'
 import { HandoffTimeoutScheduler } from '../../src/infrastructure/sse/handoffTimeoutScheduler'
 import { InProcessSseHub } from '../../src/infrastructure/sse/inProcessSseHub'
+import { RecordingMetrics } from './recordingMetrics'
 // Use bcryptjs (pure JS) for the test helper so the same helper works in
 // both the Node pool (test:ci) and the Workers pool (test:cf). bcryptjs and
 // the native bcrypt module emit interchangeable `$2b$` hash strings, so
@@ -71,6 +72,7 @@ export function buildTestApp(opts: BuildTestAppOptions = {}): { app: Hono; conta
     decrypt: (s) => Promise.resolve(s.startsWith('enc::') ? s.slice(5) : s),
     hashPassword: opts.hashPassword ?? hashPassword,
     verifyPassword: opts.verifyPassword ?? verifyPassword,
+    metrics: new RecordingMetrics(),
     healthChecks: { db: () => Promise.resolve(true), llm: () => Promise.resolve(true) },
     shutdown: () => Promise.resolve(),
   }

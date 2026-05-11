@@ -6,6 +6,7 @@ import type {
 } from '../application/ports'
 import type { HandoffTimeoutSchedulerHandle } from '../infrastructure/sse/handoffTimeoutScheduler'
 import type { Logger } from '../infrastructure/observability/logger'
+import type { MetricsPort } from '../infrastructure/observability/metrics'
 
 export type Container = Readonly<{
   driver: 'postgres' | 'cloudflare'
@@ -32,6 +33,12 @@ export type Container = Readonly<{
   hashPassword: (plaintext: string) => Promise<string>
   verifyPassword: (plaintext: string, hash: string) => Promise<boolean>
   logger: Logger
+  // Optional during the B1 commit so the build stays green while B2 (Pg)
+  // and B3 (CF) compositions wire their adapters. B3 tightens this to a
+  // required field. New tests should use `RecordingMetrics` from
+  // `tests/helpers/recordingMetrics.ts` or `noopMetrics` from the port
+  // module — never leave it undefined in handler-level code.
+  metrics?: MetricsPort
   healthChecks: Readonly<{ db: () => Promise<boolean>; llm: () => Promise<boolean> }>
   shutdown: () => Promise<void>
 }>
