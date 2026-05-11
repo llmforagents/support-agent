@@ -78,9 +78,20 @@ export async function handleVisitorMessage(
   let handoffTriggered = false
   let handoffReason: HandoffReason | null = null
 
-  const llmReq = tools !== undefined
-    ? { apiKey, model: cfg.value.agentModel, system: fullSystemPrompt, messages: history, tools, abort: ctrl.signal }
-    : { apiKey, model: cfg.value.agentModel, system: fullSystemPrompt, messages: history, abort: ctrl.signal }
+  // MCP: when site_config.mcpEnabled=true, signal the adapter to attach the
+  // @llmforagents/sdk's MCP tools (scraper/search/image). The SDK handles
+  // tool enumeration + execution internally; our existing `tool_start`
+  // handoff interception runs in parallel and is unaffected.
+  const mcpOn = cfg.value.mcpEnabled
+  const llmReq = {
+    apiKey,
+    model: cfg.value.agentModel,
+    system: fullSystemPrompt,
+    messages: history,
+    abort: ctrl.signal,
+    ...(tools !== undefined ? { tools } : {}),
+    ...(mcpOn ? { mcpEnabled: true as const } : {}),
+  }
 
   try {
     for await (const ev of deps.llm.chatStream(llmReq)) {

@@ -8,7 +8,7 @@ import { MemoryEmbedder } from '../../infrastructure/adapters/memory/memoryEmbed
 import { MemoryVectorStore } from '../../infrastructure/adapters/memory/memoryVectorStore'
 import { MemoryKnowledgeStore } from '../../infrastructure/adapters/memory/memoryKnowledgeStore'
 import { VisitorId, UsdCents, ChunkId, AdminId } from '@support/shared'
-import type { EmbedderPort, LlmPort } from '../ports'
+import type { EmbedderPort, LlmPort, LlmRequest } from '../ports'
 import type { ChatDeps } from './handleVisitorMessage'
 
 const DIM = 8
@@ -382,5 +382,78 @@ describe('handleVisitorMessage', () => {
     if (!messages.ok) return
     const sysEv = messages.value.find((m) => m.role === 'system_event')
     expect(sysEv).toBeUndefined()
+  })
+
+  // ─── MCP integration tests ────────────────────────────────────────────
+
+  it('mcp: when mcpEnabled=true (no handoff), LlmRequest carries mcpEnabled=true and no tools array', async () => {
+    const env = await setup()
+    await env.siteConfigStore.upsertOnboarding({
+      siteKey: 'X', siteName: 'Acme', primaryColor: '#000',
+      llm4agentsApiKeyEncrypted: 'enc::sk-proxy-xxxxxxxxxx',
+      agentModel: 'm', embeddingModel: 'e', embeddingDim: DIM,
+      systemPrompt: 'help', mcpEnabled: true,
+      handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: false },
+      adminOnline: false, onboardingStep: 9, onboardingCompleted: true,
+    })
+    let capturedReq: LlmRequest | undefined
+    const stubLlm: LlmPort = {
+      async *chatStream(req: LlmRequest) {
+        capturedReq = req
+        await Promise.resolve()
+        yield { type: 'text', delta: 'ok' }
+        yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
+      },
+    }
+    const r = await handleVisitorMessage({ ...makeDeps(env), llm: stubLlm }, { sessionId: env.sessionId, content: 'hi' })
+    expect(r.ok).toBe(true)
+    expect(capturedReq).toBeDefined()
+    expect(capturedReq?.mcpEnabled).toBe(true)
+    expect(capturedReq?.tools).toBeUndefined()
+  })
+
+  it('mcp: when mcpEnabled=false, no MCP signal is sent to LLM', async () => {
+    const env = await setup()
+    // setup() defaults mcpEnabled=false, toolEnabled=false, adminOnline=false.
+    let capturedReq: LlmRequest | undefined
+    const stubLlm: LlmPort = {
+      async *chatStream(req: LlmRequest) {
+        capturedReq = req
+        await Promise.resolve()
+        yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
+      },
+    }
+    await handleVisitorMessage({ ...makeDeps(env), llm: stubLlm }, { sessionId: env.sessionId, content: 'hi' })
+    expect(capturedReq).toBeDefined()
+    expect(capturedReq?.mcpEnabled).toBeUndefined()
+    expect(capturedReq?.tools).toBeUndefined()
+  })
+
+  it('mcp + handoff: both can be active simultaneously (tools includes handoff AND mcpEnabled=true)', async () => {
+    const env = await setup()
+    await env.siteConfigStore.upsertOnboarding({
+      siteKey: 'X', siteName: 'Acme', primaryColor: '#000',
+      llm4agentsApiKeyEncrypted: 'enc::sk-proxy-xxxxxxxxxx',
+      agentModel: 'm', embeddingModel: 'e', embeddingDim: DIM,
+      systemPrompt: 'help', mcpEnabled: true,
+      handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: true },
+      adminOnline: true, onboardingStep: 9, onboardingCompleted: true,
+    })
+    let capturedReq: LlmRequest | undefined
+    const stubLlm: LlmPort = {
+      async *chatStream(req: LlmRequest) {
+        capturedReq = req
+        await Promise.resolve()
+        yield { type: 'text', delta: 'ok' }
+        yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
+      },
+    }
+    const r = await handleVisitorMessage({ ...makeDeps(env), llm: stubLlm }, { sessionId: env.sessionId, content: 'hi' })
+    expect(r.ok).toBe(true)
+    expect(capturedReq).toBeDefined()
+    expect(capturedReq?.mcpEnabled).toBe(true)
+    expect(capturedReq?.tools).toBeDefined()
+    expect(capturedReq?.tools?.length).toBe(1)
+    expect(capturedReq?.tools?.[0]?.function.name).toBe('request_human_handoff')
   })
 })
