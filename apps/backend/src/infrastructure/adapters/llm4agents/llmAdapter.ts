@@ -8,20 +8,23 @@ export type LlmClientFactory = (apiKey: string, apiBase?: string) => InstanceTyp
 const realFactory: LlmClientFactory = (apiKey, apiBase) =>
   new LLM4AgentsClient({ apiKey, ...(apiBase ? { baseUrl: apiBase } : {}) })
 
-/**
- * Minimal shim that adapts a plain LlmTool[] to the shape the SDK's
- * conversation() expects for its `tools` option. The SDK only calls
- * `getDefinitions()` on this object — it never calls `call()` because
- * the handoff tool is intercepted at the stream level, not executed by the SDK.
- * Cast to `never` because the SDK's Tools class is not exported.
- */
+// SDK's `Tools` class is internal (not exported), but it duck-types its
+// consumers — `conversation()` only calls `getDefinitions()` for the tools
+// option, and `call()` is never reached because the handoff tool is
+// intercepted at the stream level (see handleVisitorMessage.ts).
+// We satisfy the `Tools` contract with a minimal object and cast to `never`
+// at the boundary, which is the only sanctioned use of `as` per CLAUDE.md
+// rules (adapter glue, not external data).
 function makeToolShim(tools: readonly LlmTool[]): never {
-  return {
-    getDefinitions: () => Promise.resolve(tools as unknown as ToolDefinition[]),
-    // call() is unreachable: handoff tool is handled by stream consumer before tool_end fires
+  // LlmTool is structurally identical to ToolDefinition; spread to drop the
+  // readonly modifier on the array (SDK expects mutable ToolDefinition[]).
+  const defs: ToolDefinition[] = [...tools]
+  const shim = {
+    getDefinitions: (): Promise<ToolDefinition[]> => Promise.resolve(defs),
     call: (_name: string, _args: Readonly<Record<string, unknown>>) =>
-      Promise.resolve({ content: [], text: '' }),
-  } as never
+      Promise.resolve({ content: [] as readonly never[], text: '' }),
+  }
+  return shim as never
 }
 
 // Internal type that covers both the real SDK `done` shape (response.usage)

@@ -125,9 +125,11 @@ export async function handleVisitorMessage(
   if (handoffTriggered && handoffReason !== null) {
     const trans = requestHandoff(session.state, handoffReason)
     if (trans.ok) {
-      // TODO(T109): replace with atomic updateStateIf to guard concurrent updates
-      const upd = await deps.sessionStore.updateState(input.sessionId, trans.next)
-      if (upd.ok) {
+      // Atomic CAS: only transition if status hasn't changed since we read it.
+      // If an operator claimed concurrently, status moved to 'active_operator'
+      // and we drop the AI escalation (operator wins).
+      const upd = await deps.sessionStore.updateStateIf(input.sessionId, session.state.status, trans.next)
+      if (upd.ok && upd.value.updated) {
         const sysEv = await deps.sessionStore.appendMessage({
           sessionId: input.sessionId, role: 'system_event',
           content: `AI escaló la conversación: ${handoffReason.toolReason}`,

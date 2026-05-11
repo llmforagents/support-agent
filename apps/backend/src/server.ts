@@ -8,11 +8,12 @@ async function main(): Promise<void> {
   const container = await composeContainer(env)
   const app = createApp(container)
   const server = serve({ fetch: app.fetch, port: env.PORT })
-  console.log(`backend listening on :${env.PORT}`)
+  container.logger.info({ port: env.PORT }, 'backend listening')
   process.on('SIGTERM', () => { server.close() ; void container.shutdown() })
 }
 
-main().catch((err) => {
-  console.error('fatal boot error', err)
+main().catch((err: unknown) => {
+  // Boot failed before the logger could be constructed — stderr is the only sink.
+  process.stderr.write(`fatal boot error: ${err instanceof Error ? err.stack ?? err.message : String(err)}\n`)
   process.exit(1)
 })

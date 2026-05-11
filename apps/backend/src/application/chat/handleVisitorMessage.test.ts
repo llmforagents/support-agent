@@ -7,7 +7,7 @@ import { MemoryBroadcast } from '../../infrastructure/adapters/memory/memoryBroa
 import { MemoryEmbedder } from '../../infrastructure/adapters/memory/memoryEmbedder'
 import { MemoryVectorStore } from '../../infrastructure/adapters/memory/memoryVectorStore'
 import { MemoryKnowledgeStore } from '../../infrastructure/adapters/memory/memoryKnowledgeStore'
-import { VisitorId, UsdCents, ChunkId } from '@support/shared'
+import { VisitorId, UsdCents, ChunkId, AdminId } from '@support/shared'
 import type { EmbedderPort, LlmPort } from '../ports'
 import type { ChatDeps } from './handleVisitorMessage'
 
@@ -332,5 +332,55 @@ describe('handleVisitorMessage', () => {
     // Category should fall back to out_of_scope
     const nhEv = adminEvents[0] as { reason: { category: string } } | undefined
     expect(nhEv?.reason.category).toBe('out_of_scope')
+  })
+
+  it('handoff: race-safe — if operator claims during the LLM stream, AI handoff is dropped (atomic CAS)', async () => {
+    const env = await setup()
+    await env.siteConfigStore.upsertOnboarding({
+      siteKey: 'X', siteName: 'Acme', primaryColor: '#000',
+      llm4agentsApiKeyEncrypted: 'enc::sk-proxy-xxxxxxxxxx',
+      agentModel: 'm', embeddingModel: 'e', embeddingDim: DIM,
+      systemPrompt: 'help', mcpEnabled: false,
+      handoffPolicy: { autoOnLowConfidence: false, autoOnFrustrationKeywords: [], timeoutBeforeRevertMs: 90000, toolEnabled: true },
+      adminOnline: true, onboardingStep: 9, onboardingCompleted: true,
+    })
+
+    const adminEvents: unknown[] = []
+    env.broadcast.subscribe('admin_inbox', (e) => adminEvents.push(e))
+
+    // Simulate an operator claiming the session mid-stream: the LLM yields
+    // tool_start AFTER we mutate state to active_operator. The CAS guard in
+    // handleVisitorMessage must detect the status drift and skip the transition.
+    const stubLlm: LlmPort = {
+      async *chatStream() {
+        await Promise.resolve()
+        const opTrans = await env.sessionStore.updateStateIf(env.sessionId, 'active_ai', {
+          status: 'active_operator', operatorId: AdminId(randomUUID()), claimedAt: new Date(),
+        })
+        if (!opTrans.ok || !opTrans.value.updated) throw new Error('failed to seed operator claim')
+        yield { type: 'tool_start', name: 'request_human_handoff', argsJson: '{"reason":"test","category":"user_request"}' }
+        yield { type: 'done', usage: { promptTokens: 1, completionTokens: 1 }, costCents: UsdCents(0) }
+      },
+    }
+
+    const r = await handleVisitorMessage({ ...makeDeps(env), llm: stubLlm }, { sessionId: env.sessionId, content: 'Hi' })
+    expect(r.ok).toBe(true)
+
+    const sessionRes = await env.sessionStore.getSession(env.sessionId)
+    expect(sessionRes.ok).toBe(true)
+    if (!sessionRes.ok) return
+    // Operator wins — state stays active_operator, AI handoff is dropped.
+    expect(sessionRes.value.state.status).toBe('active_operator')
+
+    // No new_handoff event was broadcast — admin already owns the session.
+    const newHandoffs = adminEvents.filter((e) => (e as { type: string }).type === 'new_handoff')
+    expect(newHandoffs.length).toBe(0)
+
+    // No system_event for the dropped escalation.
+    const messages = await env.sessionStore.listMessages(env.sessionId, { limit: 20 })
+    expect(messages.ok).toBe(true)
+    if (!messages.ok) return
+    const sysEv = messages.value.find((m) => m.role === 'system_event')
+    expect(sysEv).toBeUndefined()
   })
 })
