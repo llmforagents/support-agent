@@ -84,14 +84,47 @@ export class VectorizeStore implements VectorStorePort {
     return Ok(undefined)
   }
 
-  deleteBySourceBelowGeneration(
-    _sourceId: SourceId,
-    _generation: number,
+  async deleteBySourceBelowGeneration(
+    sourceId: SourceId,
+    generation: number,
   ): Promise<Result<void, AppError>> {
-    // Implemented in D3.
-    return Promise.resolve(
-      Err({ kind: 'infra_db_error', cause: 'deleteBySourceBelowGeneration not implemented' }),
-    )
+    // Vectorize has no "delete by metadata filter" — enumerate the ids in D1
+    // first so we can call deleteByIds, then DELETE from D1. Order matters:
+    // if Vectorize fails we leave D1 intact so a retry can drive the index
+    // back to consistency.
+    let stale: { results: Array<{ id: string }> }
+    try {
+      stale = await this.db
+        .prepare(`SELECT id FROM chunks WHERE source_id = ? AND ingest_generation < ?`)
+        .bind(sourceId, generation)
+        .all<{ id: string }>()
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+    if (stale.results.length === 0) return Ok(undefined)
+
+    const ids = stale.results.map((r) => r.id)
+    // Vectorize.deleteByIds accepts up to 1000 ids per call; chunk to be safe.
+    for (let i = 0; i < ids.length; i += 1000) {
+      try {
+        await this.index.deleteByIds(ids.slice(i, i + 1000))
+      } catch (err) {
+        return Err({ kind: 'infra_db_error', cause: String(err) })
+      }
+    }
+
+    try {
+      const r = await this.db
+        .prepare(`DELETE FROM chunks WHERE source_id = ? AND ingest_generation < ?`)
+        .bind(sourceId, generation)
+        .run()
+      if (!r.success) {
+        return Err({ kind: 'infra_db_error', cause: r.error ?? 'd1 delete failed' })
+      }
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+    return Ok(undefined)
   }
 
   async search(

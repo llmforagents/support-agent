@@ -241,4 +241,59 @@ describe('VectorizeStore @integration', () => {
     const hit = r.value[0]
     expect(hit?.metadata).toEqual(meta)
   })
+
+  // ── D3: deleteBySourceBelowGeneration ──────────────────────────────────
+
+  it('deleteBySourceBelowGeneration drops stale chunks from D1 AND Vectorize', async () => {
+    const sourceA = await createReadySource('A', 2)
+    const sourceB = await createReadySource('B', 1)
+
+    // sourceA: two gen-1 (stale) + two gen-2 (current)
+    const a1Stale1 = makeChunk(sourceA, 0, axisVector(0), 1)
+    const a1Stale2 = makeChunk(sourceA, 1, axisVector(1), 1)
+    const a2Cur1 = makeChunk(sourceA, 2, axisVector(2), 2)
+    const a2Cur2 = makeChunk(sourceA, 3, axisVector(3), 2)
+    // sourceB: untouched
+    const b1 = makeChunk(sourceB, 0, axisVector(4), 1)
+    await store.upsertChunks([a1Stale1, a1Stale2, a2Cur1, a2Cur2, b1])
+
+    expect(mock.size()).toBe(5)
+
+    const del = await store.deleteBySourceBelowGeneration(SourceId(sourceA), 2)
+    expect(del.ok).toBe(true)
+
+    // D1: only sourceA gen-2 (2 rows) and sourceB gen-1 (1 row) remain.
+    const remaining = await env.DB
+      .prepare('SELECT id FROM chunks ORDER BY chunk_index')
+      .all<{ id: string }>()
+    const ids = new Set(remaining.results.map((r) => r.id))
+    expect(ids.has(a1Stale1.id)).toBe(false)
+    expect(ids.has(a1Stale2.id)).toBe(false)
+    expect(ids.has(a2Cur1.id)).toBe(true)
+    expect(ids.has(a2Cur2.id)).toBe(true)
+    expect(ids.has(b1.id)).toBe(true)
+
+    // Vectorize: same 3 ids remain.
+    const vecIds = new Set(mock.ids())
+    expect(vecIds.has(a1Stale1.id)).toBe(false)
+    expect(vecIds.has(a1Stale2.id)).toBe(false)
+    expect(vecIds.has(a2Cur1.id)).toBe(true)
+    expect(vecIds.has(a2Cur2.id)).toBe(true)
+    expect(vecIds.has(b1.id)).toBe(true)
+    expect(mock.size()).toBe(3)
+  })
+
+  it('deleteBySourceBelowGeneration on a source with no stale chunks is a no-op', async () => {
+    const sourceId = await createReadySource('NoStale', 1)
+    await store.upsertChunks([makeChunk(sourceId, 0, axisVector(0), 1)])
+
+    const del = await store.deleteBySourceBelowGeneration(SourceId(sourceId), 1)
+    expect(del.ok).toBe(true)
+    expect(mock.size()).toBe(1)
+
+    const remaining = await env.DB
+      .prepare('SELECT COUNT(*) AS c FROM chunks')
+      .first<{ c: number }>()
+    expect(remaining?.c).toBe(1)
+  })
 })
