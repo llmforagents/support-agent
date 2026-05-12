@@ -16,10 +16,20 @@ interface ConnectAgentStepProps {
 export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.Element {
   const [apiKey, setApiKey] = useState('')
   const [model, setModel] = useState('openai/gpt-4o-mini')
+  const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault()
-    onNext({ llm4agentsApiKey: apiKey, agentModel: model })
+    setError(null)
+    if (!apiKey.startsWith('sk-proxy-')) {
+      setError('API key must start with "sk-proxy-". Get one at llm4agents.com.')
+      return
+    }
+    if (model.trim().length === 0) {
+      setError('Pick a model (e.g. openai/gpt-4o-mini).')
+      return
+    }
+    onNext({ llm4agentsApiKey: apiKey, agentModel: model.trim() })
   }
 
   return (
@@ -65,6 +75,9 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
             onChange={(e) => { setModel(e.target.value) }}
           />
         </div>
+        {error !== null && (
+          <p role="alert" className="text-sm text-red-600">{error}</p>
+        )}
         <Button type="submit" className="w-full">
           {t('connectAgent.submit')}
         </Button>

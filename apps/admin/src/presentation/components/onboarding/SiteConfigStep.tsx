@@ -16,10 +16,21 @@ interface SiteConfigStepProps {
 export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Element {
   const [siteName, setSiteName] = useState('')
   const [primaryColor, setPrimaryColor] = useState('#2563eb')
+  const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault()
-    onNext({ siteName, primaryColor })
+    setError(null)
+    const name = siteName.trim()
+    if (name.length === 0) {
+      setError('Enter a site name.')
+      return
+    }
+    if (!/^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
+      setError('Primary color must be a 6-digit hex code (e.g. #4f46e5).')
+      return
+    }
+    onNext({ siteName: name, primaryColor })
   }
 
   return (
@@ -62,6 +73,9 @@ export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Eleme
             />
           </div>
         </div>
+        {error !== null && (
+          <p role="alert" className="text-sm text-red-600">{error}</p>
+        )}
         <Button type="submit" className="w-full">
           {t('siteConfig.submit')}
         </Button>
