@@ -29,7 +29,9 @@ export const VisitorId = makeUuidBrand('VisitorId')
 
 export type ApiKey = Brand<string, 'ApiKey'>
 export const ApiKey = (raw: string): ApiKey => {
-  if (!raw.startsWith('sk-proxy-') || raw.length < 20) {
+  // llm4agents tokens are opaque (typically 64-hex-char). Only sanity-check
+  // length here; the upstream proxy is authoritative on validity.
+  if (raw.length < 20) {
     throw new Error(`Invalid ApiKey`)
   }
   return raw as ApiKey

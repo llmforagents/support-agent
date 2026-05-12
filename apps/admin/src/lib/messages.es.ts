@@ -55,7 +55,7 @@ const messages = {
   'connectAgent.title': 'Conectar tu Agente',
   'connectAgent.description': 'Ingresá tu clave de API de LLM4Agents y elegí el modelo.',
   'connectAgent.apiKey': 'Clave de API LLM4Agents',
-  'connectAgent.apiKeyPlaceholder': 'sk-proxy-...',
+  'connectAgent.apiKeyPlaceholder': 'Pegá tu clave de 64 caracteres',
   'connectAgent.apiKeyHint': 'Obtené tu clave en',
   'connectAgent.model': 'Modelo',
   'connectAgent.submit': 'Continuar',

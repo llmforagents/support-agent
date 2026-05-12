@@ -16,7 +16,10 @@ export type CreateFirstAdminInput = z.infer<typeof CreateFirstAdminSchema>
 export const CompleteOnboardingSchema = z.object({
   siteName: z.string().min(1).max(100),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  llm4agentsApiKey: z.string().regex(/^sk-proxy-/),
+  // The llm4agents proxy accepts opaque API keys (typically 64-hex-char tokens).
+  // Don't lock in a prefix here — formats may evolve and the upstream proxy
+  // is the source of truth on validity.
+  llm4agentsApiKey: z.string().min(20),
   agentModel: z.string().min(1),
   systemPrompt: z.string().min(10).max(8000),
 })

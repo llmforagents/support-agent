@@ -21,8 +21,8 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
   function handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault()
     setError(null)
-    if (!apiKey.startsWith('sk-proxy-')) {
-      setError('API key must start with "sk-proxy-". Get one at llm4agents.com.')
+    if (apiKey.trim().length < 20) {
+      setError('API key looks too short. Paste your llm4agents agent key (typically 64 characters).')
       return
     }
     if (model.trim().length === 0) {

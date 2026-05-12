@@ -19,10 +19,14 @@ describe('branded types', () => {
   })
 
   describe('ApiKey', () => {
-    it('accepts sk-proxy- prefix', () => {
+    it('accepts a 64-char hex token (typical llm4agents agent key)', () => {
+      const key = '63a4b3d1c54cfeac5c865a035675aaf72f96794e5688520ec5a8ec5dbde7bb62'
+      expect(ApiKey(key)).toBe(key)
+    })
+    it('accepts a legacy sk-proxy-* token (back-compat)', () => {
       expect(ApiKey('sk-proxy-abc123def456')).toBe('sk-proxy-abc123def456')
     })
-    it('rejects without prefix', () => {
+    it('rejects short strings (<20 chars)', () => {
       expect(() => ApiKey('abc123')).toThrow(/Invalid ApiKey/)
     })
     it('rejects empty', () => {

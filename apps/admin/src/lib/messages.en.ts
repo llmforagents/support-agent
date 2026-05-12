@@ -55,7 +55,7 @@ const messages = {
   'connectAgent.title': 'Connect Your Agent',
   'connectAgent.description': 'Enter your LLM4Agents API key and choose the model for your support agent.',
   'connectAgent.apiKey': 'LLM4Agents API key',
-  'connectAgent.apiKeyPlaceholder': 'sk-proxy-...',
+  'connectAgent.apiKeyPlaceholder': 'Paste your 64-character API key',
   'connectAgent.apiKeyHint': 'Get your key from',
   'connectAgent.model': 'Model',
   'connectAgent.submit': 'Continue',
