@@ -8,7 +8,7 @@ import { requestLogger } from './middleware/requestLogger'
 import { errorHandler } from './middleware/errorHandler'
 import { metricsMiddleware } from './middleware/metricsMiddleware'
 import { widgetCors, adminCors } from './middleware/cors'
-import { csrf } from './middleware/csrf'
+import { csrf, csrfCookie } from './middleware/csrf'
 import { healthRoutes } from './routes/health'
 import { metricsRoutes } from './routes/metrics'
 import { adminAuthRoutes } from './routes/adminAuth'
@@ -48,6 +48,11 @@ export function createApp(c: Container): Hono {
   }))
   app.use('/v1/widget/*', widgetCors())
   app.use('/v1/admin/*', adminCors(c.env.ADMIN_ORIGIN))
+  // Mint the CSRF cookie on every /v1/admin/* request (including /auth/me,
+  // which the SPA hits on page load) so the cookie is in the browser by the
+  // time the user submits a mutating form. Validation still happens only on
+  // the specific prefixes below.
+  app.use('/v1/admin/*', csrfCookie({ secure: c.env.COOKIE_SECURE }))
   app.route('/v1/admin/auth', adminAuthRoutes(c))
   app.use('/v1/admin/onboarding/*', csrf({ secure: c.env.COOKIE_SECURE }))
   app.use('/v1/admin/config/*', csrf({ secure: c.env.COOKIE_SECURE }))
