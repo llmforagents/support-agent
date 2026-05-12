@@ -49,26 +49,44 @@ For production deployments with TLS, see [`docs/operations/self-hosting.md`](doc
 This project ships with a Workers-compatible build that uses D1, R2, Vectorize, and Durable Objects in place of Postgres + pgvector + local files + in-process pubsub. Same routes, same admin UI, same widget — different storage layer wired in by `composeContainerCloudflare.ts`.
 
 ```bash
-# 1. Install wrangler if you don't have it
-pnpm add -g wrangler
+cd apps/backend
 
-# 2. Create the D1 database (the id goes into wrangler.toml)
-wrangler d1 create support-llm4agents
+# 1. Authenticate with Cloudflare
+pnpm exec wrangler login
+
+# 2. Create the D1 database (paste the printed id into wrangler.toml -> database_id)
+pnpm exec wrangler d1 create support-llm4agents
 
 # 3. Create the Vectorize index (dimension must match your embedding model)
-wrangler vectorize create support-llm4agents-chunks --dimensions=1536 --metric=cosine
+pnpm exec wrangler vectorize create support-llm4agents-chunks --dimensions=1536 --metric=cosine
 
 # 4. Create the R2 bucket
-wrangler r2 bucket create support-llm4agents-files
+pnpm exec wrangler r2 bucket create support-llm4agents-files
 
-# 5. Put the database_id wrangler printed in `apps/backend/wrangler.toml`
+# 5. (Optional) Edit wrangler.toml `[[routes]]` to your domain. Default: support.llm4agents.com.
+#    The zone must already live in your Cloudflare account; wrangler provisions DNS + TLS on deploy.
+
 # 6. Put your secrets
-wrangler secret put ENCRYPTION_KEY        # 32-byte hex (openssl rand -hex 32)
-wrangler secret put COOKIE_SECRET         # 32+ char string
-wrangler secret put STREAM_TOKEN_SECRET   # 32+ char string
+pnpm exec wrangler secret put ENCRYPTION_KEY        # 32-byte hex (openssl rand -hex 32)
+pnpm exec wrangler secret put COOKIE_SECRET         # 32+ char string
+pnpm exec wrangler secret put STREAM_TOKEN_SECRET   # 32+ char string
 
-# 7. Deploy
-cd apps/backend && pnpm dlx wrangler deploy
+# 7. Build everything + bundle admin SPA + widget into the worker assets dir + deploy
+cd ../.. && pnpm build && pnpm --filter backend run deploy:cf
+```
+
+**Worker Static Assets layout** — `support.llm4agents.com` serves three things from one deploy:
+
+| Path | Served by | What |
+|---|---|---|
+| `/v1/*`, `/healthz`, `/readyz`, `/metrics` | worker (Hono) | API + health (run_worker_first) |
+| `/widget.js`, `/embed.html` | static assets | widget bundle (loaded by your visitor's `<script>` tag) |
+| `/`, `/login`, `/inbox`, ... | static assets + SPA fallback | admin React app |
+
+After deploy, visit `https://support.llm4agents.com` and the onboarding wizard appears. Finish it, then paste the snippet shown on the last step into your website before `</body>`:
+
+```html
+<script src="https://support.llm4agents.com/widget.js" data-site-key="..." async></script>
 ```
 
 **Limitations on Cloudflare:**

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-cf/
+apps/backend/public/
 .turbo/
 .vite/
 .tsbuildinfo

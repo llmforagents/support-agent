@@ -13,6 +13,36 @@ CF_D1_BINDING = "DB"
 CF_VECTORIZE_BINDING = "VEC"
 CF_R2_BINDING = "FILES"
 CF_DURABLE_OBJECT_BINDING = "HUB"
+PUBLIC_API_URL = "https://support.llm4agents.com"
+ADMIN_ORIGIN = "https://support.llm4agents.com"
+
+# Custom domain — requires the llm4agents.com zone to live in this CF account.
+# Wrangler provisions the DNS record + TLS cert on first deploy.
+[[routes]]
+pattern = "support.llm4agents.com"
+custom_domain = true
+
+# Workers Static Assets — serves the admin SPA (root) + widget bundle (/widget.js)
+# alongside the worker. `directory` is populated by scripts/bundle-assets.mjs
+# before `wrangler deploy` (combines apps/admin/dist + apps/widget/dist).
+#
+# Routing:
+#   - run_worker_first paths (API + health + metrics) always hit the worker
+#   - Everything else hits the assets handler:
+#       /             -> public/index.html (admin SPA)
+#       /widget.js    -> public/widget.js  (widget bundle)
+#       /assets/...   -> public/assets/... (admin bundled JS/CSS)
+#       any 404       -> public/index.html (SPA fallback, React Router takes over)
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = [
+  "/v1/*",
+  "/healthz",
+  "/readyz",
+  "/metrics",
+]
 
 [[d1_databases]]
 binding = "DB"

@@ -13,7 +13,9 @@
     "test:ci": "vitest run --exclude '**/*.integration.test.ts'",
     "test:integration": "vitest run integration",
     "test:cf": "vitest run --config tests/cloudflare/vitest.config.ts",
-    "build:cf": "wrangler deploy --dry-run --outdir dist-cf"
+    "build:cf": "pnpm bundle:assets && wrangler deploy --dry-run --outdir dist-cf",
+    "bundle:assets": "node scripts/bundle-assets.mjs",
+    "deploy:cf": "pnpm bundle:assets && wrangler deploy"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
