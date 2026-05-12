@@ -153,7 +153,9 @@ function setButtonIcon(btn: HTMLButtonElement, icon: 'chat' | 'close'): void {
 function createIframe(siteKey: string, baseUrl: string, id: string): HTMLIFrameElement {
   const iframe = document.createElement('iframe')
   iframe.id = id
-  iframe.src = `${baseUrl}/embed/${siteKey}`
+  // Load the static widget shell (embed.html) and pass the site key via query.
+  // The shell reads it from location.search at boot — see embed-app.tsx.
+  iframe.src = `${baseUrl}/embed.html?siteKey=${encodeURIComponent(siteKey)}`
   iframe.title = 'Support chat'
   iframe.allow = 'clipboard-write'
   iframe.style.cssText = [

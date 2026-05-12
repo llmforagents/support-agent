@@ -56,6 +56,17 @@ async function main() {
       await cp(src, join(publicDir, f))
     }
   }
+  // Merge widget's hashed assets into the admin's assets/ directory.
+  // Vite uses content-hashed filenames (e.g. embed-D3YwJzz1.js vs
+  // index-DJ7q_q1Y.js) so there are no collisions in practice.
+  const widgetAssets = join(widgetDist, 'assets')
+  if (await exists(widgetAssets)) {
+    const target = join(publicDir, 'assets')
+    await mkdir(target, { recursive: true })
+    for (const entry of await readdir(widgetAssets)) {
+      await cp(join(widgetAssets, entry), join(target, entry), { recursive: true })
+    }
+  }
 
   // Report sizes for visibility.
   const tree = []

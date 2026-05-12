@@ -37,6 +37,10 @@ custom_domain = true
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+# Serve *.html files at their literal URL. Default ("auto-trailing-slash")
+# would 307 /embed.html -> /embed, and /embed has no asset → SPA fallback
+# would then serve the admin index.html, breaking the visitor widget iframe.
+html_handling = "none"
 run_worker_first = [
   "/v1/*",
   "/healthz",

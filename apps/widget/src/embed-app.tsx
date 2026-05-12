@@ -41,7 +41,10 @@ function App(): JSX.Element {
   const sseRef = useRef<SseClient | null>(null)
   const pendingMessageIdRef = useRef<string | null>(null)
 
-  const siteKey = window.__SITE_KEY__ ?? ''
+  // siteKey: ?siteKey=... in the URL (set by bootstrap.ts when it creates
+  // the iframe) takes priority. window.__SITE_KEY__ kept as fallback for the
+  // legacy /embed/:siteKey worker route + the iframe demo template.
+  const siteKey = new URLSearchParams(window.location.search).get('siteKey') ?? window.__SITE_KEY__ ?? ''
 
   // ── 1. Load widget config ─────────────────────────────────────────────────
   useEffect(() => {
