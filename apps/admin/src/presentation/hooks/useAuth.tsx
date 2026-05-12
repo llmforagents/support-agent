@@ -12,10 +12,15 @@ interface MeResponse {
   readonly email: string
 }
 
+interface AuthStatusResponse {
+  readonly adminExists: boolean
+}
+
 type AuthState =
   | { readonly status: 'loading' }
   | { readonly status: 'authenticated'; readonly id: string; readonly email: string }
   | { readonly status: 'unauthenticated' }
+  | { readonly status: 'needs-onboarding' }
 
 interface AuthContextValue {
   readonly auth: AuthState
@@ -33,12 +38,22 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
     try {
       const me = await apiClient.get<MeResponse>('/auth/me')
       setAuth({ status: 'authenticated', id: me.id, email: me.email })
+      return
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (!(err instanceof ApiError) || err.status !== 401) {
         setAuth({ status: 'unauthenticated' })
-      } else {
-        setAuth({ status: 'unauthenticated' })
+        return
       }
+    }
+    // 401 on /me — either no admin exists yet (needs onboarding) or admin
+    // exists but the session cookie isn't present. Differentiate via /auth/status.
+    try {
+      const status = await apiClient.get<AuthStatusResponse>('/auth/status')
+      setAuth({ status: status.adminExists ? 'unauthenticated' : 'needs-onboarding' })
+    } catch {
+      // If /auth/status is unreachable, default to login — onboarding has the
+      // same error surface as a normal login when there genuinely is no admin.
+      setAuth({ status: 'unauthenticated' })
     }
   }, [])
 

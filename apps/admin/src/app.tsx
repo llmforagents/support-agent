@@ -5,35 +5,38 @@ import { Onboarding } from '@/presentation/routes/Onboarding'
 import { Conversations } from '@/presentation/routes/Conversations'
 import { KnowledgeBase } from '@/presentation/routes/KnowledgeBase'
 
+function Loading(): React.JSX.Element {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <span role="status" aria-live="polite" className="text-sm text-gray-600">Loading…</span>
+    </div>
+  )
+}
+
 function RequireAuth({ children }: { readonly children: React.JSX.Element }): React.JSX.Element {
   const { auth } = useAuth()
-  if (auth.status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <span role="status" aria-live="polite" className="text-sm text-gray-600">Loading…</span>
-      </div>
-    )
-  }
-  if (auth.status === 'unauthenticated') {
-    return <Navigate to="/login" replace />
-  }
+  if (auth.status === 'loading') return <Loading />
+  if (auth.status === 'needs-onboarding') return <Navigate to="/onboarding" replace />
+  if (auth.status === 'unauthenticated') return <Navigate to="/login" replace />
   return children
 }
 
 function BootRedirect(): React.JSX.Element {
   const { auth } = useAuth()
-  if (auth.status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <span role="status" aria-live="polite" className="text-sm text-gray-600">Loading…</span>
-      </div>
-    )
-  }
-  if (auth.status === 'authenticated') {
-    return <Navigate to="/conversations" replace />
-  }
-  // unauthenticated — check if first-time setup is needed
+  if (auth.status === 'loading') return <Loading />
+  if (auth.status === 'authenticated') return <Navigate to="/conversations" replace />
+  if (auth.status === 'needs-onboarding') return <Navigate to="/onboarding" replace />
   return <Navigate to="/login" replace />
+}
+
+// Wraps /login so first-run installs land on the onboarding wizard instead of
+// staring at a login form with no admin to log into.
+function LoginOrOnboarding({ element }: { readonly element: React.JSX.Element }): React.JSX.Element {
+  const { auth } = useAuth()
+  if (auth.status === 'loading') return <Loading />
+  if (auth.status === 'authenticated') return <Navigate to="/conversations" replace />
+  if (auth.status === 'needs-onboarding') return <Navigate to="/onboarding" replace />
+  return element
 }
 
 export function App(): React.JSX.Element {
@@ -42,7 +45,7 @@ export function App(): React.JSX.Element {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<BootRedirect />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginOrOnboarding element={<Login />} />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route
             path="/conversations"
