@@ -33,6 +33,22 @@ export function adminAuthRoutes(c: Container): Hono {
     const body = CreateFirstAdminSchema.parse(await ctx.req.json())
     const r = await createFirstAdmin({ adminStore: c.adminStore, hashPassword: c.hashPassword }, body)
     if (!r.ok) throw new AppHttpError(r.error)
+    // Auto-login: the wizard's remaining steps (site config, system prompt)
+    // hit endpoints that require a session. Issuing the session cookie here
+    // makes the wizard a single uninterrupted flow.
+    const loginR = await loginOrch(
+      { adminStore: c.adminStore, sessionStore: c.adminSessionStore, verifyPassword: c.verifyPassword, sha256: c.sha256 },
+      body,
+    )
+    if (loginR.ok) {
+      setCookie(ctx, 'session', loginR.value.token, {
+        httpOnly: true,
+        secure: c.env.COOKIE_SECURE,
+        sameSite: 'Lax',
+        path: '/',
+        maxAge: Math.floor(ADMIN_SESSION_TTL_MS / 1000),
+      })
+    }
     return ctx.json({ id: r.value.id, email: r.value.email })
   })
 
