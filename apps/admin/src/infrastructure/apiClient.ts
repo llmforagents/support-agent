@@ -1,5 +1,12 @@
 const BASE = '/v1/admin'
 
+interface ZodIssueLike { readonly message?: unknown; readonly path?: readonly unknown[] }
+interface ErrorBody {
+  readonly error?: unknown
+  readonly kind?: unknown
+  readonly detail?: { readonly issues?: readonly ZodIssueLike[]; readonly retryAfterSec?: unknown } & Readonly<Record<string, unknown>>
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -11,6 +18,50 @@ export class ApiError extends Error {
         : String(body)
     super(message)
     this.name = 'ApiError'
+  }
+
+  /** Human-readable message suitable for showing in a form-level error. */
+  get userMessage(): string {
+    const b = (typeof this.body === 'object' && this.body !== null ? this.body : {}) as ErrorBody
+
+    // Validation errors: surface the first field issue verbatim.
+    // Backend shape: { error: 'bad_request', kind: 'validation_error', detail: { issues: [...] } }
+    if (b.kind === 'validation_error' && b.detail?.issues && b.detail.issues.length > 0) {
+      const issue = b.detail.issues[0]
+      if (issue) {
+        const msg = typeof issue.message === 'string' ? issue.message : 'invalid value'
+        const field = Array.isArray(issue.path) && issue.path.length > 0 ? String(issue.path[issue.path.length - 1]) : null
+        return field ? `${field}: ${msg}` : msg
+      }
+    }
+
+    // Rate limiting: include retry hint when present.
+    if (b.kind === 'rate_limit_exceeded' || b.kind === 'auth_rate_limited') {
+      const sec = b.detail?.retryAfterSec
+      if (typeof sec === 'number' && Number.isFinite(sec)) {
+        return `Rate limited — retry in ${Math.ceil(sec)} s`
+      }
+      return 'Rate limited — try again shortly'
+    }
+
+    // Generic kind-derived message (e.g. "invalid_credentials").
+    if (typeof b.error === 'string') return b.error.replace(/_/g, ' ')
+
+    return `HTTP ${String(this.status)}`
+  }
+
+  /** Per-field errors keyed by the last path segment, for form-field highlighting. */
+  get fieldErrors(): Readonly<Record<string, string>> {
+    const b = (typeof this.body === 'object' && this.body !== null ? this.body : {}) as ErrorBody
+    if (b.kind !== 'validation_error' || !b.detail?.issues) return {}
+    const out: Record<string, string> = {}
+    for (const issue of b.detail.issues) {
+      if (!Array.isArray(issue.path) || issue.path.length === 0) continue
+      const key = String(issue.path[issue.path.length - 1])
+      const msg = typeof issue.message === 'string' ? issue.message : 'invalid value'
+      if (!(key in out)) out[key] = msg
+    }
+    return out
   }
 }
 

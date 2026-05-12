@@ -27,8 +27,9 @@ export function Login(): React.JSX.Element {
       await login(email, password)
       void navigate('/conversations')
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setError(t('login.error.invalidCredentials'))
+      if (err instanceof ApiError) {
+        if (err.status === 401) setError(t('login.error.invalidCredentials'))
+        else setError(err.userMessage)
       } else {
         setError(t('login.error.generic'))
       }

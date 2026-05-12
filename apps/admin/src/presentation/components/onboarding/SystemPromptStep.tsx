@@ -42,7 +42,7 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
       onNext({ systemPrompt, embedSnippet: result.embedSnippet })
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(`${t('systemPrompt.error.generic')} (${err.status.toString()})`)
+        setError(err.userMessage)
       } else {
         setError(t('systemPrompt.error.generic'))
       }

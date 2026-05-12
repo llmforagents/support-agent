@@ -24,8 +24,14 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
       await apiClient.post('/auth/onboarding', { email, password })
       onNext()
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setError(t('createAdmin.error.conflict'))
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setError(t('createAdmin.error.conflict'))
+        } else {
+          // Surface the real backend message (e.g. "password: Too small: expected
+          // string to have >=12 characters") instead of a generic "try again".
+          setError(err.userMessage)
+        }
       } else {
         setError(t('createAdmin.error.generic'))
       }
