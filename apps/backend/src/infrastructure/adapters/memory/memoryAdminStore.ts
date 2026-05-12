@@ -48,4 +48,14 @@ export class MemoryAdminStore implements AdminStorePort {
     }
     return Promise.resolve(Err({ kind: 'infra_db_error', cause: 'not found' }))
   }
+
+  updatePasswordHash(id: AdminId, passwordHash: string): Promise<Result<void, AppError>> {
+    for (const [k, v] of this.rows) {
+      if (v.id === id) {
+        this.rows.set(k, { ...v, passwordHash })
+        return Promise.resolve(Ok(undefined))
+      }
+    }
+    return Promise.resolve(Err({ kind: 'infra_db_error', cause: 'not found' }))
+  }
 }

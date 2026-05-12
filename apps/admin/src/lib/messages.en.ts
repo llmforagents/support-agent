@@ -112,6 +112,8 @@ const messages = {
   // ── Sidebar ────────────────────────────────────────────────────────────────
   'sidebar.conversations': 'Conversations',
   'sidebar.knowledgeBase': 'Knowledge base',
+  'sidebar.settings': 'Settings',
+  'sidebar.logout': 'Sign out',
 
   // ── Common ─────────────────────────────────────────────────────────────────
   'common.cancel': 'Cancel',

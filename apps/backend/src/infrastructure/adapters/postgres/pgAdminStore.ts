@@ -93,4 +93,13 @@ export class PgAdminStore implements AdminStorePort {
       return Err({ kind: 'infra_db_error', cause: String(err) })
     }
   }
+
+  async updatePasswordHash(id: AdminId, passwordHash: string): Promise<Result<void, AppError>> {
+    try {
+      await this.pool.query(`UPDATE admins SET password_hash = $1 WHERE id = $2`, [passwordHash, id])
+      return Ok(undefined)
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+  }
 }

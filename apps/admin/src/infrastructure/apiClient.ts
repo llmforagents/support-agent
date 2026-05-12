@@ -262,6 +262,12 @@ export const apiClient = {
       body: JSON.stringify({ online }),
     })
   },
+  changePassword(currentPassword: string, newPassword: string): Promise<{ readonly ok: true }> {
+    return request('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    })
+  },
 
   // ── MySQL connections ────────────────────────────────────────────────────────
   mysqlConnectionsList(): Promise<{ readonly connections: readonly MysqlConnection[] }> {

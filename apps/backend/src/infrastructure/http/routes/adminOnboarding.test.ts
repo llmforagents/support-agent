@@ -27,7 +27,7 @@ describe('admin onboarding routes', () => {
       headers: { 'Content-Type': 'application/json', cookie, 'X-CSRF-Token': csrfToken },
       body: JSON.stringify({
         siteName: 'Acme', primaryColor: '#4f46e5',
-        llm4agentsApiKey: 'sk-proxy-abcdefghij',
+        llm4agentsApiKey: 'sk-proxy-abcdefghijklmnop',
         agentModel: 'anthropic/claude-sonnet-4',
         systemPrompt: 'You help customers.',
       }),
@@ -42,7 +42,7 @@ describe('admin onboarding routes', () => {
     const { app, cookie, csrfToken } = await loggedIn()
     await app.request('/v1/admin/onboarding/complete', {
       method: 'POST', headers: { 'Content-Type': 'application/json', cookie, 'X-CSRF-Token': csrfToken },
-      body: JSON.stringify({ siteName: 'A', primaryColor: '#000000', llm4agentsApiKey: 'sk-proxy-abcdefghij', agentModel: 'm', systemPrompt: 'p p p p p p' }),
+      body: JSON.stringify({ siteName: 'A', primaryColor: '#000000', llm4agentsApiKey: 'sk-proxy-abcdefghijklmnop', agentModel: 'm', systemPrompt: 'p p p p p p' }),
     })
     const res = await app.request('/v1/admin/config', { headers: { cookie } })
     expect(res.status).toBe(200)

@@ -128,4 +128,16 @@ export class D1AdminStore implements AdminStorePort {
       return Err({ kind: 'infra_db_error', cause: String(err) })
     }
   }
+
+  async updatePasswordHash(id: AdminId, passwordHash: string): Promise<Result<void, AppError>> {
+    try {
+      await this.db
+        .prepare(`UPDATE admins SET password_hash = ? WHERE id = ?`)
+        .bind(passwordHash, id)
+        .run()
+      return Ok(undefined)
+    } catch (err) {
+      return Err({ kind: 'infra_db_error', cause: String(err) })
+    }
+  }
 }

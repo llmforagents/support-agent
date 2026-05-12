@@ -22,6 +22,7 @@ export interface AdminStorePort {
   findByEmail(email: string): Promise<Result<AdminRow | null, AppError>>
   findById(id: AdminId): Promise<Result<AdminRow | null, AppError>>
   touchLastLogin(id: AdminId): Promise<Result<void, AppError>>
+  updatePasswordHash(id: AdminId, passwordHash: string): Promise<Result<void, AppError>>
 }
 
 export type AdminSessionRow = Readonly<{

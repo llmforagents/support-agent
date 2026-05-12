@@ -4,6 +4,7 @@ import { Login } from '@/presentation/routes/Login'
 import { Onboarding } from '@/presentation/routes/Onboarding'
 import { Conversations } from '@/presentation/routes/Conversations'
 import { KnowledgeBase } from '@/presentation/routes/KnowledgeBase'
+import { Settings } from '@/presentation/routes/Settings'
 
 function Loading(): React.JSX.Element {
   return (
@@ -60,6 +61,14 @@ export function App(): React.JSX.Element {
             element={
               <RequireAuth>
                 <KnowledgeBase />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth>
+                <Settings />
               </RequireAuth>
             }
           />

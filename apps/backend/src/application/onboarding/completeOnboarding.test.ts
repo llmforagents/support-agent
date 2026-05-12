@@ -9,7 +9,7 @@ describe('completeOnboarding', () => {
     const store = new MemorySiteConfigStore()
     const r = await completeOnboarding({ siteConfigStore: store, encrypt: fakeEncrypt }, {
       siteName: 'Acme', primaryColor: '#4f46e5',
-      llm4agentsApiKey: 'sk-proxy-abcdefghij',
+      llm4agentsApiKey: 'sk-proxy-abcdefghijklmnop',
       agentModel: 'anthropic/claude-sonnet-4',
       systemPrompt: 'You are the support agent for Acme.',
     })
@@ -25,7 +25,7 @@ describe('completeOnboarding', () => {
   it('idempotent — re-calling does not duplicate', async () => {
     const store = new MemorySiteConfigStore()
     const dep = { siteConfigStore: store, encrypt: fakeEncrypt }
-    const input = { siteName: 'A', primaryColor: '#000000', llm4agentsApiKey: 'sk-proxy-abcdefghij', agentModel: 'm', systemPrompt: 'p' }
+    const input = { siteName: 'A', primaryColor: '#000000', llm4agentsApiKey: 'sk-proxy-abcdefghijklmnop', agentModel: 'm', systemPrompt: 'p' }
     const a = await completeOnboarding(dep, input)
     const b = await completeOnboarding(dep, input)
     expect(a.ok && b.ok).toBe(true)

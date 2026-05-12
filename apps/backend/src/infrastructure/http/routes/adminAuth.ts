@@ -1,14 +1,19 @@
 import { Hono } from 'hono'
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie'
 import {
-  CreateFirstAdminSchema, LoginSchema, ADMIN_SESSION_TTL_MS, ADMIN_LOGIN_RATE_LIMIT_PER_HOUR,
+  CreateFirstAdminSchema, LoginSchema, ChangePasswordSchema,
+  ADMIN_SESSION_TTL_MS, ADMIN_LOGIN_RATE_LIMIT_PER_HOUR,
 } from '@support/shared'
+import type { AdminId } from '@support/shared'
 import type { Container } from '../../../composition/container'
 import type { Context } from 'hono'
 import { createFirstAdmin } from '../../../application/auth/createFirstAdmin'
 import { login as loginOrch } from '../../../application/auth/login'
 import { logout as logoutOrch } from '../../../application/auth/logout'
 import { verifySession } from '../../../application/auth/verifySession'
+import { changePassword as changePasswordOrch } from '../../../application/auth/changePassword'
+import { requireAdmin } from '../middleware/requireAdmin'
+import { csrf } from '../middleware/csrf'
 import { AppHttpError } from '../middleware/errorHandler'
 import { rateLimit } from '../middleware/rateLimit'
 
@@ -82,6 +87,23 @@ export function adminAuthRoutes(c: Container): Hono {
     const r = await verifySession({ adminStore: c.adminStore, sessionStore: c.adminSessionStore, sha256: c.sha256 }, token)
     if (!r.ok) throw new AppHttpError(r.error)
     return ctx.json({ id: r.value.id, email: r.value.email })
+  })
+
+  // Change-password is a mutating, auth-required endpoint — gate it explicitly.
+  // (The global csrfCookie middleware in createApp mints the cookie; csrf here
+  // validates the X-CSRF-Token header against it.)
+  app.use('/password', csrf({ secure: c.env.COOKIE_SECURE }))
+  app.use('/password', requireAdmin({ adminStore: c.adminStore, sessionStore: c.adminSessionStore, sha256: c.sha256 }))
+  app.put('/password', async (ctx) => {
+    const body = ChangePasswordSchema.parse(await ctx.req.json())
+    const admin = ctx.get('admin') as { id: AdminId } | undefined
+    if (!admin) throw new AppHttpError({ kind: 'auth_no_session' })
+    const r = await changePasswordOrch(
+      { adminStore: c.adminStore, hashPassword: c.hashPassword, verifyPassword: c.verifyPassword },
+      { adminId: admin.id, currentPassword: body.currentPassword, newPassword: body.newPassword },
+    )
+    if (!r.ok) throw new AppHttpError(r.error)
+    return ctx.json({ ok: true })
   })
 
   return app

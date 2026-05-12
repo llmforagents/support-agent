@@ -13,6 +13,12 @@ export const CreateFirstAdminSchema = z.object({
 })
 export type CreateFirstAdminInput = z.infer<typeof CreateFirstAdminSchema>
 
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(MIN_PASSWORD_LEN),
+})
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>
+
 export const CompleteOnboardingSchema = z.object({
   siteName: z.string().min(1).max(100),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
