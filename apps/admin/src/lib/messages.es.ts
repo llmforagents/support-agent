@@ -37,7 +37,7 @@ const messages = {
   'createAdmin.description': 'Esta será tu cuenta para el dashboard de soporte.',
   'createAdmin.email': 'Email',
   'createAdmin.password': 'Contraseña',
-  'createAdmin.passwordHint': 'Mínimo 8 caracteres',
+  'createAdmin.passwordHint': 'Mínimo 12 caracteres',
   'createAdmin.submit': 'Crear cuenta',
   'createAdmin.submitting': 'Creando cuenta…',
   'createAdmin.error.conflict': 'Ya existe una cuenta de administrador.',

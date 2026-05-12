@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { MIN_PASSWORD_LEN } from '@support/shared'
 import { Button } from '@/presentation/components/ui/button'
 import { Input } from '@/presentation/components/ui/input'
 import { Label } from '@/presentation/components/ui/label'
@@ -61,7 +62,7 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
             type="password"
             autoComplete="new-password"
             required
-            minLength={8}
+            minLength={MIN_PASSWORD_LEN}
             aria-describedby="ca-password-hint"
             value={password}
             onChange={(e) => { setPassword(e.target.value) }}

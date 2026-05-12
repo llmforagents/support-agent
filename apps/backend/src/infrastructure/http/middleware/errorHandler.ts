@@ -1,4 +1,5 @@
 import type { MiddlewareHandler } from 'hono'
+import { ZodError } from 'zod'
 import type { AppError } from '@support/shared'
 
 export class AppHttpError extends Error {
@@ -58,6 +59,15 @@ export function errorHandler(): MiddlewareHandler {
       else log?.warn?.({ requestId, kind: err.appError.kind }, 'app error')
       // c.res must be set directly to override Hono's default error handler
       c.res = c.json(r.body, r.status as 400 | 401 | 402 | 403 | 404 | 409 | 410 | 415 | 422 | 429 | 500 | 502 | 504)
+      return
+    }
+
+    if (err instanceof ZodError) {
+      // Bare `.parse(body)` calls inside route handlers throw ZodError when the
+      // body shape is wrong. Surface this as a clean 400 instead of bubbling up
+      // to a generic 500. The frontend can render the issues array if useful.
+      log?.warn?.({ requestId, issues: err.issues }, 'bad request body')
+      c.res = c.json({ error: 'bad_request', kind: 'validation_error', detail: { issues: err.issues } }, 400)
       return
     }
 
