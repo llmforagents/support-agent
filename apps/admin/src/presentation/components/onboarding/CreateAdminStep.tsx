@@ -19,6 +19,17 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     setError(null)
+    // Client-side checks first so the user sees consistent English error copy
+    // (browser-native `required`/`minLength` messages localize to the browser
+    // language, which we don't control from the server).
+    if (!email.includes('@')) {
+      setError('Enter a valid email address.')
+      return
+    }
+    if (password.length < MIN_PASSWORD_LEN) {
+      setError(`Password is too short — minimum ${String(MIN_PASSWORD_LEN)} characters.`)
+      return
+    }
     setLoading(true)
     try {
       await apiClient.post('/auth/onboarding', { email, password })
@@ -49,6 +60,7 @@ export function CreateAdminStep({ onNext }: CreateAdminStepProps): React.JSX.Ele
       <form
         onSubmit={(e) => { void handleSubmit(e) }}
         className="space-y-4"
+        noValidate
       >
         <div className="space-y-2">
           <Label htmlFor="ca-email">{t('createAdmin.email')}</Label>

@@ -28,7 +28,7 @@ export function ConnectAgentStep({ onNext }: ConnectAgentStepProps): React.JSX.E
         <h2 className="text-xl font-bold text-gray-900">{t('connectAgent.title')}</h2>
         <p className="mt-1 text-sm text-gray-700">{t('connectAgent.description')}</p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
           <Label htmlFor="ca-api-key">{t('connectAgent.apiKey')}</Label>
           <Input

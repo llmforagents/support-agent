@@ -60,6 +60,7 @@ export function SystemPromptStep({ onNext, siteData }: SystemPromptStepProps): R
       <form
         onSubmit={(e) => { void handleSubmit(e) }}
         className="space-y-4"
+        noValidate
       >
         <div className="space-y-2">
           <Label htmlFor="sp-prompt">{t('systemPrompt.label')}</Label>

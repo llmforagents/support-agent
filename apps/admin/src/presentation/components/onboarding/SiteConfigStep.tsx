@@ -28,7 +28,7 @@ export function SiteConfigStep({ onNext }: SiteConfigStepProps): React.JSX.Eleme
         <h2 className="text-xl font-bold text-gray-900">{t('siteConfig.title')}</h2>
         <p className="mt-1 text-sm text-gray-700">{t('siteConfig.description')}</p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
           <Label htmlFor="sc-name">{t('siteConfig.siteName')}</Label>
           <Input
