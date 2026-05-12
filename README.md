@@ -37,7 +37,7 @@ That's the entire integration.
 - Connect a **MySQL database** and let the agent run validated `SELECT` queries — perfect for "where's my order?" style questions.
 - **3-column live inbox** to claim conversations, send operator messages, release back to AI, or close.
 - Online/offline toggle: when you're offline the AI handles everything; when you're online it can escalate to you.
-- All UI in Spanish; English keys are also bundled.
+- Admin UI in English by default; Spanish available with `?lang=es` (persists). Widget auto-detects the visitor's browser locale (English + Spanish bundled).
 
 **Under the hood**
 

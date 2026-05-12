@@ -1,8 +1,12 @@
 /**
  * i18n.ts — minimal translation boundary for the admin app.
  *
- * Reads the browser locale (or falls back to 'en') and returns a `t` function
- * that looks up keys in the matching message catalog. No external dependencies.
+ * Default locale is English. Spanish is available as an opt-in via:
+ *   1. URL query param:  ?lang=es     (persists to localStorage)
+ *   2. localStorage:     localStorage.setItem('admin_lang', 'es')
+ *
+ * Browser locale is NOT auto-detected — admin users are typically operators
+ * who want a consistent UI regardless of which machine they're on.
  *
  * Usage:
  *   import { t } from '@/lib/i18n'
@@ -23,14 +27,28 @@ const CATALOGS: Readonly<Record<string, MessageCatalog>> = {
   es: es as MessageCatalog,
 }
 
-function detectLocale(): string {
-  const raw = navigator.language ?? 'en'
-  // Match on the primary language tag only (e.g. 'es-AR' → 'es')
-  const primary = raw.split('-')[0]?.toLowerCase() ?? 'en'
-  return primary in CATALOGS ? primary : 'en'
+const STORAGE_KEY = 'admin_lang'
+
+function resolveLocale(): string {
+  if (typeof window === 'undefined') return 'en'
+  // 1. URL param wins (and persists)
+  try {
+    const param = new URLSearchParams(window.location.search).get('lang')
+    if (param && param in CATALOGS) {
+      window.localStorage.setItem(STORAGE_KEY, param)
+      return param
+    }
+  } catch { /* SSR / no DOM — ignore */ }
+  // 2. localStorage
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    if (saved && saved in CATALOGS) return saved
+  } catch { /* storage disabled — ignore */ }
+  // 3. Default
+  return 'en'
 }
 
-const catalog: MessageCatalog = CATALOGS[detectLocale()] ?? (en as MessageCatalog)
+const catalog: MessageCatalog = CATALOGS[resolveLocale()] ?? (en as MessageCatalog)
 
 /**
  * Look up a message key.
