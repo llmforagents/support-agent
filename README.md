@@ -4,178 +4,258 @@
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](.nvmrc)
 [![Release](https://img.shields.io/github/v/tag/llmforagents/support-agent?sort=semver&label=release)](https://github.com/llmforagents/support-agent/releases)
 
-Open-source AI support agent for any website. Drop-in floating chat widget powered by your llm4agents account, with knowledge-base RAG, MySQL ingest, human handoff, and a WCAG AA admin dashboard. Two deployment paths: self-host on Node + Postgres, or ship to Cloudflare Workers (D1 + Vectorize + R2 + Durable Objects).
+**Open-source AI support chat for any website.** Drop one `<script>` tag on your page and your visitors get a Tawk-style floating chat — answered by an AI agent that reads your knowledge base, queries your database, and can hand off to a human when needed.
 
-> **Status:** `v0.5.2` — production-ready. **481 automated tests** + 6 Playwright E2E specs. **0 known vulnerabilities**. Cloudflare bundle 3.4 MB gzip (well under the 10 MB Workers limit).
+Built on top of your [llm4agents](https://llm4agents.com) account. Ships with everything you need to self-host: chat widget, admin dashboard, knowledge ingestion, operator inbox, metrics. No SaaS dependency beyond your model provider.
 
-> **⚠ Production deployment:** the default `docker-compose.yml` is for local development. Before exposing to the internet, follow [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) to put a TLS-terminating reverse proxy in front. Never expose the backend on plain HTTP.
+```html
+<script src="https://support.your-domain.com/widget.js" data-site-key="..." async></script>
+```
+
+That's the entire integration.
+
+## What you get
+
+- A **floating chat widget** that drops onto any site with a single `<script>` tag.
+- An **admin dashboard** where you upload PDFs, connect MySQL, and watch live conversations.
+- An **AI agent** that answers visitor questions from your knowledge base, falls back to a human operator when it can't help, and stays out of the way the rest of the time.
 
 ## Features
 
-- **Floating chat widget** — Preact 10, dual-build (shadow DOM bootstrap + iframe), Tawk-style trigger, WCAG AA compliant (ARIA roles, focus management, keyboard nav, `prefers-reduced-motion`).
-- **One-step embed** — `<script src="https://your-domain/widget.js" data-site-key="...">` before `</body>`.
-- **Knowledge-base RAG** — ingest PDF / Markdown / TXT files and MySQL `SELECT` queries (with AST-validated SQL safety). Embeddings + cosine search via pgvector (Postgres) or Cloudflare Vectorize. Idempotent re-ingest via a generation counter; orphan chunks are filtered out at query time.
-- **Human handoff** — the AI invokes a `request_human_handoff` tool when escalation is appropriate; admin "online" toggle gates whether the tool is exposed. A 90-second timeout reverts unclaimed handoffs back to AI. Operator UX with claim / release / close, atomic CAS to guard against AI-vs-operator races.
-- **Admin dashboard** — 3-column inbox, onboarding wizard, KB sources management (upload, reindex, preview chunks), MySQL connection manager, operator composer. React 19 + Vite 6 + Tailwind 4 + TanStack Query. Spanish UI primary; English secondary.
-- **Prometheus metrics** — `/metrics` endpoint (Postgres) or Analytics Engine dataset (Cloudflare). 11 instrumented metric series covering HTTP, chat, LLM cost, ingest lifecycle, and handoff timeouts.
-- **Two deployment targets, one codebase** — `STORAGE_DRIVER=postgres` (default) or `STORAGE_DRIVER=cloudflare`. Selected at composition time; application code is identical between targets.
-- **Single-tenant** — one install = one website = one admin. Multi-tenant is out of scope.
+**For your visitors**
 
-## Quick start (local)
+- Friendly floating widget, indigo theme out of the box. Loads in under 5 KB gzipped.
+- Streaming AI replies (no waiting for the full response).
+- Seamless escalation to a human when the AI decides it can't help — visitor just keeps chatting in the same window.
+- Works on any site, framework-agnostic. Renders inside a shadow DOM so it never touches your CSS.
+- Fully accessible: keyboard navigation, screen readers, `prefers-reduced-motion`, WCAG AA contrast.
+
+**For you, the admin**
+
+- One-step onboarding wizard creates your account, configures the site, encrypts your `llm4agents` API key.
+- Upload **PDFs, Markdown, and plain text** as knowledge sources. The widget answers from them via RAG.
+- Connect a **MySQL database** and let the agent run validated `SELECT` queries — perfect for "where's my order?" style questions.
+- **3-column live inbox** to claim conversations, send operator messages, release back to AI, or close.
+- Online/offline toggle: when you're offline the AI handles everything; when you're online it can escalate to you.
+- All UI in Spanish; English keys are also bundled.
+
+**Under the hood**
+
+- Two deployment paths, same codebase: **Node + Postgres** (self-host with Docker) or **Cloudflare Workers** (D1 + Vectorize + R2 + Durable Objects).
+- Prometheus `/metrics` endpoint on the Node path; Cloudflare Analytics Engine on the Workers path.
+- Real-time updates via Server-Sent Events. No WebSockets, no polling.
+- Single-tenant by design — one install = one site = one admin. Keeps the model simple.
+
+## Quick start — run it locally in 3 minutes
+
+You'll need [Docker](https://docs.docker.com/get-docker/) and Node 20+. That's it.
 
 ```bash
 git clone https://github.com/llmforagents/support-agent
 cd support-agent
-node scripts/init-env.mjs                   # generates .env with strong secrets
+node scripts/init-env.mjs          # generates .env with strong random secrets
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-- Admin: http://localhost:3000 (complete the onboarding wizard)
-- Backend: http://localhost:3001
-- Postgres: 127.0.0.1:5432 (loopback only)
+Open **http://localhost:3000** and the onboarding wizard greets you. You'll need an `llm4agents` API key (format `sk-proxy-…`) to finish step 3. Get one at [llm4agents.com](https://llm4agents.com) if you don't have one yet.
 
-You'll need an `llm4agents` API key (format `sk-proxy-...`) to finish onboarding. The wizard creates the admin, configures the site, and stores the key encrypted with AES-256-GCM (the encryption key comes from `.env`).
+After onboarding, the last step shows your embed snippet. Paste it on any site before `</body>` and you're live.
 
-After onboarding, paste the snippet shown on the last step into your website's HTML, before `</body>`:
-
-```html
-<script src="https://your-domain/widget.js" data-site-key="..."></script>
-```
-
-For production deployments with TLS, see [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md).
+For production self-hosting (TLS, reverse proxy, backups, secrets rotation), see [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md). **Don't expose the backend on plain HTTP** — the onboarding wizard, session cookies, and SSE streams all need TLS.
 
 ## Deploy to Cloudflare
 
-This project ships with a Workers-compatible build that uses D1, R2, Vectorize, and Durable Objects in place of Postgres + pgvector + local files + in-process pubsub. Same routes, same admin UI, same widget — different storage layer wired in by `composeContainerCloudflare.ts`.
+If you'd rather skip the Docker setup and run everything serverless on Cloudflare's edge, the project ships ready for it. The same admin UI, the same widget, the same chat — backed by D1, Vectorize, R2, and Durable Objects instead of Postgres + pgvector + local disk.
+
+A single Worker hosts the API **and** serves the admin SPA + widget bundle from the same domain. End user sees one URL, you have one deploy.
+
+### What you'll need
+
+- A Cloudflare account with the domain you want to use as a Zone in your account (e.g. `your-domain.com`).
+- `wrangler` (bundled — no need to install globally).
+- An `llm4agents` API key for the onboarding wizard.
+
+### Steps
 
 ```bash
+git clone https://github.com/llmforagents/support-agent
+cd support-agent && pnpm install
 cd apps/backend
 
-# 1. Authenticate with Cloudflare
+# 1. Authenticate
 pnpm exec wrangler login
 
-# 2. Create the D1 database (paste the printed id into wrangler.toml -> database_id)
+# 2. Create the storage resources (the D1 id will be printed — copy it)
 pnpm exec wrangler d1 create support-llm4agents
-
-# 3. Create the Vectorize index (dimension must match your embedding model)
 pnpm exec wrangler vectorize create support-llm4agents-chunks --dimensions=1536 --metric=cosine
-
-# 4. Create the R2 bucket
 pnpm exec wrangler r2 bucket create support-llm4agents-files
 
-# 5. (Optional) Edit wrangler.toml `[[routes]]` to your domain. Default: support.llm4agents.com.
-#    The zone must already live in your Cloudflare account; wrangler provisions DNS + TLS on deploy.
+# 3. Paste the D1 id into wrangler.toml -> [[d1_databases]] database_id
 
-# 6. Put your secrets
-pnpm exec wrangler secret put ENCRYPTION_KEY        # 32-byte hex (openssl rand -hex 32)
-pnpm exec wrangler secret put COOKIE_SECRET         # 32+ char string
-pnpm exec wrangler secret put STREAM_TOKEN_SECRET   # 32+ char string
+# 4. Choose your domain — edit wrangler.toml -> [[routes]] pattern
+#    Default is support.llm4agents.com; change to your own subdomain.
 
-# 7. Build everything + bundle admin SPA + widget into the worker assets dir + deploy
+# 5. Generate and upload your secrets
+pnpm exec wrangler secret put ENCRYPTION_KEY        # openssl rand -hex 32
+pnpm exec wrangler secret put COOKIE_SECRET         # openssl rand -base64 36
+pnpm exec wrangler secret put STREAM_TOKEN_SECRET   # openssl rand -base64 36
+
+# 6. Build everything and deploy
 cd ../.. && pnpm build && pnpm --filter backend run deploy:cf
 ```
 
-**Worker Static Assets layout** — `support.llm4agents.com` serves three things from one deploy:
+The first deploy automatically provisions the DNS record and a TLS certificate for your custom domain. Give it ~30 seconds, then visit `https://your-subdomain.your-domain.com` and the onboarding wizard appears.
 
-| Path | Served by | What |
-|---|---|---|
-| `/v1/*`, `/healthz`, `/readyz`, `/metrics` | worker (Hono) | API + health (run_worker_first) |
-| `/widget.js`, `/embed.html` | static assets | widget bundle (loaded by your visitor's `<script>` tag) |
-| `/`, `/login`, `/inbox`, ... | static assets + SPA fallback | admin React app |
+### How the single-domain routing works
 
-After deploy, visit `https://support.llm4agents.com` and the onboarding wizard appears. Finish it, then paste the snippet shown on the last step into your website before `</body>`:
+The Worker is configured to serve three things from the same hostname:
+
+| Path | Goes to |
+|---|---|
+| `/v1/*`, `/healthz`, `/readyz`, `/metrics` | Worker (API) |
+| `/widget.js`, `/embed.html` | Static asset (widget bundle) |
+| `/`, `/login`, `/inbox`, anything else | Static asset (admin SPA, with React Router fallback) |
+
+If you ever want to point a separate subdomain at the widget (e.g. for CDN caching), the bundle is just `https://your-domain.com/widget.js` — feel free to cache it elsewhere.
+
+### Limitations on Cloudflare
+
+- **MySQL knowledge sources aren't supported on Cloudflare** — the `mysql2` driver doesn't run in the Workers runtime. The route layer returns a friendly 422 if you try to create one. If you need MySQL ingest, use the Node + Postgres deploy instead.
+- The handoff-timeout sweeper runs as a Durable Object alarm with ~1 s jitter (vs Node's exact `setInterval`). In practice, indistinguishable.
+- Everything else — embeddings, KB ingest, chat, handoff, metrics — works identically.
+
+## Embed the widget on your site
+
+After onboarding (either deploy), you'll see a snippet like this on the last step of the wizard:
 
 ```html
-<script src="https://support.llm4agents.com/widget.js" data-site-key="..." async></script>
+<script src="https://your-domain.com/widget.js" data-site-key="abc123xyz456abc123xy" async></script>
 ```
 
-**Limitations on Cloudflare:**
+Paste it before `</body>` on any page where you want the chat. The widget:
 
-- **MySQL data sources are not supported** (the `mysql2` driver isn't compatible with the Workers runtime). The route layer returns a 422 with `mysql_unsupported_on_driver` if you try to create one. Use the Postgres deployment if you need MySQL ingest.
-- The handoff timeout runs as a Durable Object alarm, so the cadence may have ~1s jitter vs. the Node `setInterval`.
-- Embeddings, KB ingest, and chat all work the same as on the Node path.
+- Loads asynchronously — never blocks your page render.
+- Renders inside a shadow DOM — won't conflict with your CSS.
+- Auto-detects locale (defaults to Spanish, falls back gracefully).
+- Is keyboard-accessible from the trigger button.
 
-## Metrics
+### Customizing the look
 
-On the Node + Postgres deploy the backend exposes a Prometheus scrape endpoint at `/metrics`:
+The widget's primary color is set during onboarding and ships in `site_config`. To change it later, log into the admin and update it under **Configuración → Apariencia** (coming soon — for now, edit the row in `site_config` directly).
 
-```sh
+## How it works
+
+A high-level mental model in 4 boxes:
+
+```
+┌────────────────────┐    ┌────────────────────────────────────────┐
+│  Visitor's browser │    │             Your deployment            │
+│                    │    │                                         │
+│  widget.js         │───►│  ┌──────────┐  ┌──────────────────┐    │
+│  (Preact, shadow)  │ ◄──┤  │   Hono   │  │  Embeddings +    │    │
+│                    │ SSE│  │ backend  │◄►│  Vector store    │    │
+└────────────────────┘    │  └────┬─────┘  └──────────────────┘    │
+                          │       │                                 │
+┌────────────────────┐    │  ┌────▼─────┐  ┌──────────────────┐    │
+│  Admin's browser   │───►│  │ Admin SPA│  │  llm4agents      │    │
+│                    │ ◄──┤  │ (React)  │  │  proxy (LLM API) │    │
+│                    │SSE │  └──────────┘  └──────────────────┘    │
+└────────────────────┘    └────────────────────────────────────────┘
+```
+
+- **The widget** is a tiny Preact app loaded via shadow DOM, talking to the backend over fetch + SSE.
+- **The backend** is a Hono app — runs as Node + Postgres, or as a Cloudflare Worker + D1 + Vectorize + R2 + Durable Objects. Same code, different adapters wired in at composition time via `STORAGE_DRIVER=postgres` or `cloudflare`.
+- **The admin** is a React 19 + Vite SPA. On Cloudflare deploys it's served as static assets from the same worker.
+- **The LLM** is your `llm4agents` account — chat completions for the agent, embeddings for the knowledge base. Your key is encrypted with AES-256-GCM and stored in the database.
+
+The codebase follows Clean Architecture per app: `domain → application → infrastructure → presentation`. External dependencies (databases, file stores, LLMs, the broadcast hub) live behind a port interface; adapters under `apps/backend/src/infrastructure/adapters/{postgres,cloudflare,filesystem,memory}` swap in based on the driver. If you want to add a new backend (Supabase, SQLite, whatever), implement the ports and you're done.
+
+## Observability
+
+The Node + Postgres deploy exposes a Prometheus scrape endpoint at `/metrics`:
+
+```bash
 curl http://localhost:3001/metrics
 ```
 
-The endpoint emits:
+You get metrics for every interesting axis:
 
-- `http_requests_total{method,route,status}` and `http_request_duration_seconds{method,route}` — every request, after `requestId` and before auth so 401/403 responses are still counted. UUIDs in the path are collapsed to `:id` to bound label cardinality.
-- `chat_messages_total{role}` — visitor / assistant / system_event messages.
-- `llm_request_duration_seconds{model}` and `llm_cost_cents{model}` — LLM stream timings and cost (per the model in `site_config.agentModel`).
-- `handoff_requests_total{kind,category}` — AI-triggered handoffs (`kind=ai_decision`).
-- `handoff_timeout_reverts_total` — sessions auto-reverted from `handoff_requested` back to `active_ai` by the timeout sweeper.
-- `ingest_started_total{source_type}`, `ingest_completed_total{source_type,status}`, `ingest_duration_seconds{source_type}`, `ingest_progress_chunks{source_id}` — source ingest lifecycle (PDF / MD / TXT / mysql_query).
+| Metric | What it tells you |
+|---|---|
+| `http_requests_total`, `http_request_duration_seconds` | Request rate, latency p50/p95/p99, per route + method + status |
+| `chat_messages_total{role}` | Throughput by visitor / assistant / system_event |
+| `llm_request_duration_seconds`, `llm_cost_cents` | LLM stream timings + cost, labelled by model |
+| `handoff_requests_total`, `handoff_timeout_reverts_total` | How often the AI escalates + how often nobody picks up |
+| `ingest_*` | Source ingest lifecycle (started / completed / duration / progress) |
 
-Default histogram buckets target sub-second web latencies (5 ms → 10 s).
+The endpoint is **unauthenticated by default** so it scrapes cleanly. Put it behind a reverse proxy or firewall rule for anything that's not on a private network.
 
-**Security.** `/metrics` is **unauthenticated by default**. For production, put it behind a reverse-proxy basic-auth, VPN, or firewall rule — Prometheus scrape targets should not be public.
-
-**Cloudflare deploy.** Metrics are emitted to a bound Analytics Engine dataset (`METRICS` binding in `wrangler.toml`). There is no `/metrics` HTTP endpoint on Cloudflare; query the dataset via Cloudflare's Workers Analytics Engine REST API. When the binding is absent (local `wrangler dev`, vitest-pool-workers), the metrics adapter falls back to a no-op.
-
-## Architecture
-
-- **Monorepo** — pnpm 9 workspaces: `apps/backend` (Hono 4), `apps/admin` (React 19 + Vite 6), `apps/widget` (Preact 10 + Vite, dual-build), `packages/shared` (branded types + Zod schemas + Result type + env loader), `e2e` (Playwright 1.59 + axe-core 4.11).
-- **Clean Architecture in the backend** — `domain → application → infrastructure → presentation`. All external dependencies are behind a Port interface (see `apps/backend/src/application/ports.ts`); adapters live under `infrastructure/adapters/{postgres,cloudflare,filesystem,memory,llm4agents}`.
-- **Dual driver** — Postgres + pgvector + local files + in-process pubsub **OR** Cloudflare D1 + Vectorize + R2 + Durable Objects. Selected via the `STORAGE_DRIVER` env at composition time. Two composition roots: `composeContainerPostgres.ts` (mounted by `src/server.ts`) and `composeContainerCloudflare.ts` (mounted by `src/worker.ts`). Application code is identical across drivers.
-- **TypeScript strict everywhere** — `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, branded types for domain IDs (`SessionId`, `AdminId`, `ChunkId`, `UsdCents`, ...), `Result<T, E>` for fallible operations, ESLint `--max-warnings 0` across all packages.
+On Cloudflare, the same metrics are emitted to a bound **Analytics Engine** dataset (`METRICS` binding in `wrangler.toml`). Query them via the [Workers Analytics Engine REST API](https://developers.cloudflare.com/analytics/analytics-engine/sql-api/).
 
 ## Development
 
+If you want to hack on this:
+
 ```bash
 pnpm install
+
+# Run everything with hot reload (in 3 terminals or via dev:test)
 pnpm dev:backend      # http://localhost:3001
 pnpm dev:admin        # http://localhost:3000 (proxies /v1 → backend)
-pnpm dev:widget       # http://localhost:3002 (preview iframe)
-pnpm dev:test         # all three concurrently — used by Playwright
+pnpm dev:widget       # http://localhost:3002
 
-pnpm typecheck                          # all workspaces
-pnpm lint                               # eslint --max-warnings 0
-pnpm test:ci                            # unit tests (Node pool)
-pnpm test:integration                   # Postgres integration via testcontainers
-pnpm --filter backend run test:cf       # Cloudflare integration via vitest-pool-workers
-pnpm --filter backend run build:cf      # wrangler dry-run validates the Workers bundle
-pnpm audit                              # full chain (no e2e — see below)
+# Or all three concurrently
+pnpm dev:test
+
+# Quality gates
+pnpm typecheck
+pnpm lint
+pnpm test:ci                            # unit tests
+pnpm test:integration                   # uses testcontainers Postgres — needs Docker
+pnpm --filter backend run test:cf       # Cloudflare adapter tests (miniflare)
+pnpm --filter backend run build:cf      # validates the Workers bundle
+pnpm audit                              # the full chain above
 ```
 
-**End-to-end (Playwright + axe-core)** — see [`e2e/README.md`](e2e/README.md). Runs against a live local stack (Postgres + dev servers); requires `pnpm --filter e2e run install-browsers` once. Not part of `pnpm audit` (user-driven by design).
+For end-to-end browser tests (Playwright + axe-core), see [`e2e/README.md`](e2e/README.md).
 
-Test counts at `v0.5.2`:
+The codebase is a pnpm workspace:
 
-| Pool | Tests |
-|---|---|
-| Unit (Node) — backend / shared / admin / widget | 332 + 25 + 13 + 15 = **385** |
-| Postgres integration (`testcontainers-postgresql`) | **46** |
-| Cloudflare integration (`@cloudflare/vitest-pool-workers`) | **59** |
-| Playwright E2E (user-driven) | **6 specs** |
+```
+apps/backend     # Hono server, all the business logic + adapters
+apps/admin       # React 19 + Vite SPA
+apps/widget      # Preact 10 + Vite, dual-build (shadow DOM + iframe)
+packages/shared  # Branded types, Zod schemas, Result type, env loader
+e2e              # Playwright + axe-core
+```
+
+Pull requests welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for branch + commit conventions.
 
 ## Documentation
 
-- [`docs/operations/self-hosting.md`](docs/operations/self-hosting.md) — Production deployment with TLS.
-- [`docs/operations/backup.md`](docs/operations/backup.md) — Backup & restore.
-- [`docs/operations/secrets.md`](docs/operations/secrets.md) — Secret management & rotation.
-- [`docs/operations/github-bootstrap.md`](docs/operations/github-bootstrap.md) — Repo + CI bootstrap.
-- [`e2e/README.md`](e2e/README.md) — Running the Playwright + axe-core E2E suite.
-- [`apps/widget/README.md`](apps/widget/README.md) — Widget build variants + a11y caveat.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — Development setup, branch & commit conventions.
-- [`SECURITY.md`](.github/SECURITY.md) — Security disclosure.
+- [Self-hosting with TLS](docs/operations/self-hosting.md) — production deployment, reverse proxy setup.
+- [Backup & restore](docs/operations/backup.md) — Postgres + R2 backup strategies.
+- [Secret management](docs/operations/secrets.md) — rotating encryption keys, cookie secrets.
+- [GitHub bootstrap](docs/operations/github-bootstrap.md) — setting up a fork for CI/CD.
+- [Running the E2E suite](e2e/README.md) — Playwright + axe-core against a live local stack.
+- [Widget build variants](apps/widget/README.md) — shadow DOM vs iframe, accessibility caveats.
+- [Security disclosure](.github/SECURITY.md).
 
 ## Release history
 
-- **`v0.1.0`** ✅ Skeleton + chat without RAG. Backend skeleton, admin onboarding wizard, widget embed, AI replies via `@llmforagents/sdk`.
-- **`v0.2.0`** ✅ Knowledge base: PDF / Markdown / TXT ingestion + embeddings + RAG retrieval with cosine similarity over pgvector.
-- **`v0.3.0`** ✅ MySQL source (AST-validated SELECT queries, auto-LIMIT, denied-keyword filter) + auto-handoff via LLM tool + operator mode (claim / release / close, 90s timeout revert).
-- **`v0.3.1`** ✅ Atomic CAS for AI-triggered handoff race (operator vs AI) + observability cleanup (pino logger in boot path).
-- **`v0.4.0`** ✅ Cloudflare adapters: D1 + Vectorize + R2 + Durable Objects. Dual-driver via `STORAGE_DRIVER` env. `encryption.ts` ported to Web Crypto so it runs unchanged on both runtimes.
-- **`v0.5.0`** ✅ Prometheus metrics (Postgres `/metrics` + Cloudflare Analytics Engine) + WCAG AA pass (widget + admin) + Playwright E2E suite (6 specs).
-- **`v0.5.1`** ✅ Remove the MCP toggle — web support is covered by RAG + MySQL ingest + human handoff; MCP added cost-control surface area we don't want to maintain.
-- **`v0.5.2`** ✅ Relicense from MIT to Apache 2.0 (adds explicit patent grant + NOTICE preservation per §4(d)).
+- **`v0.5.2`** Relicensed under Apache 2.0 (adds patent grant + NOTICE preservation).
+- **`v0.5.1`** Removed the MCP toggle — RAG + MySQL ingest + handoff cover the support use case.
+- **`v0.5.0`** Prometheus metrics, WCAG AA accessibility pass, Playwright E2E suite.
+- **`v0.4.0`** Cloudflare deployment: D1 + Vectorize + R2 + Durable Objects. Dual-driver via `STORAGE_DRIVER` env.
+- **`v0.3.1`** Atomic CAS guard for the AI-vs-operator handoff race.
+- **`v0.3.0`** MySQL knowledge source + auto-handoff via LLM tool call + operator inbox.
+- **`v0.2.0`** Knowledge base: PDF/Markdown/TXT ingestion + embeddings + RAG retrieval.
+- **`v0.1.0`** First release — chat widget + admin onboarding + AI replies.
 
 ## License
 
 Apache 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+
+---
+
+Built by and for the [llm4agents](https://llm4agents.com) community. Issues, PRs, and questions welcome.
