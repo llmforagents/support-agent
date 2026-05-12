@@ -73,17 +73,17 @@ export function ConversationView({ session, currentAdminId }: Props): React.JSX.
         <div className="flex gap-2">
           {canClaim && (
             <Button size="sm" onClick={() => { claim.mutate() }} disabled={claim.isPending}>
-              Reclamar
+              Claim
             </Button>
           )}
           {canRelease && (
             <Button size="sm" variant="outline" onClick={() => { release.mutate() }} disabled={release.isPending}>
-              Liberar
+              Release
             </Button>
           )}
           {canClose && (
             <Button size="sm" variant="ghost" onClick={() => { close.mutate() }} disabled={close.isPending}>
-              Cerrar
+              Close
             </Button>
           )}
         </div>
@@ -94,7 +94,7 @@ export function ConversationView({ session, currentAdminId }: Props): React.JSX.
         role="log"
         aria-live="polite"
         aria-relevant="additions"
-        aria-label="Mensajes de la conversación"
+        aria-label="Conversation messages"
         className="flex-1 space-y-3 overflow-y-auto p-4"
       >
         {messagesQ.data?.messages.map((m: Message) => {
@@ -111,10 +111,10 @@ export function ConversationView({ session, currentAdminId }: Props): React.JSX.
           }
           const isVisitor = m.role === 'visitor'
           const articleLabel = m.role === 'operator'
-            ? 'Mensaje del operador'
+            ? 'Operator message'
             : m.role === 'assistant'
-              ? 'Mensaje del asistente'
-              : 'Mensaje del visitante'
+              ? 'Assistant message'
+              : 'Visitor message'
           return (
             <article
               key={m.id}
@@ -133,7 +133,7 @@ export function ConversationView({ session, currentAdminId }: Props): React.JSX.
               >
                 {m.role === 'operator' && (
                   // 0.85 opacity on white over indigo-700 = ample contrast (>4.5:1)
-                  <div className="mb-0.5 text-xs opacity-85">Operador</div>
+                  <div className="mb-0.5 text-xs opacity-85">Operator</div>
                 )}
                 {m.role === 'assistant' && (
                   // zinc-600 on white = 7.1:1

@@ -60,7 +60,7 @@ export function KnowledgeBase(): React.JSX.Element {
             <h1 className="text-2xl font-semibold text-zinc-900">{t('kb.title')}</h1>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => { setMysqlModalOpen(true) }}>
-                Conectar MySQL
+                Connect MySQL
               </Button>
               <Button onClick={() => { setUploadOpen(true) }}>{t('kb.upload')}</Button>
             </div>

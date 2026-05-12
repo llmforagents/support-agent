@@ -91,14 +91,14 @@ export function SourceDetail({
         {sourceQ.data !== undefined && (
           <div className="space-y-1 text-sm text-zinc-700">
             <div>
-              Tipo: <strong>{sourceQ.data.sourceType.toUpperCase()}</strong>
+              Type: <strong>{sourceQ.data.sourceType.toUpperCase()}</strong>
             </div>
             <div>
               Status: <strong>{state?.status}</strong>
             </div>
             {state?.status === 'ingesting' && 'progress' in state && (
               <div>
-                Progreso:{' '}
+                Progress:{' '}
                 {(state as IngestingState).progress.processed} /{' '}
                 {(state as IngestingState).progress.total}
               </div>

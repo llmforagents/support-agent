@@ -38,7 +38,7 @@ export function OnboardingWizard(): React.JSX.Element {
   const totalSteps = 6
 
   return (
-    <main id="main-content" className="w-full max-w-lg" aria-label="Asistente de onboarding">
+    <main id="main-content" className="w-full max-w-lg" aria-label="Onboarding wizard">
       {/* Progress bar */}
       <div className="mb-6">
         {/* gray-700 = 8:1 on white (AA pass). gray-400 was 2.9:1 (fails). */}
@@ -51,7 +51,7 @@ export function OnboardingWizard(): React.JSX.Element {
           aria-valuenow={step + 1}
           aria-valuemin={1}
           aria-valuemax={totalSteps}
-          aria-label={`Paso ${(step + 1).toString()} de ${totalSteps.toString()}`}
+          aria-label={`Step ${(step + 1).toString()} of ${totalSteps.toString()}`}
           className="mt-1 h-1.5 w-full rounded-full bg-gray-200"
         >
           <div

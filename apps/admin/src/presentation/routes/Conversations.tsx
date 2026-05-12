@@ -78,7 +78,7 @@ export function Conversations(): React.JSX.Element {
           className="flex flex-1 items-center justify-center text-zinc-600"
         >
           <p role="status" aria-live="polite">
-            {selectedId !== null ? 'Cargando…' : 'Seleccioná una sesión.'}
+            {selectedId !== null ? 'Loading…' : 'Select a session.'}
           </p>
         </main>
       )}

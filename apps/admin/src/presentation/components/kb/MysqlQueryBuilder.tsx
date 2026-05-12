@@ -30,10 +30,10 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
   const validate = useMutation({
     mutationFn: () => apiClient.mysqlValidateQuery(connectionId, query),
     onSuccess: (r) => {
-      setValidationMsg(r.ok ? '✓ Query válida' : `✗ ${r.reason ?? 'inválida'}`)
+      setValidationMsg(r.ok ? '✓ Valid query' : `✗ ${r.reason ?? 'invalid'}`)
     },
     onError: (err: unknown) => {
-      setValidationMsg(`✗ ${err instanceof Error ? err.message : 'error al validar'}`)
+      setValidationMsg(`✗ ${err instanceof Error ? err.message : 'validation error'}`)
     },
   })
 
@@ -45,7 +45,7 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
       onClose()
     },
     onError: (err: unknown) => {
-      setSubmitError(err instanceof Error ? err.message : 'Error al crear el source')
+      setSubmitError(err instanceof Error ? err.message : 'Failed to create source')
     },
   })
 
@@ -83,10 +83,10 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
       <Card className="w-full max-w-2xl space-y-4 p-6">
-        <h2 id={titleId} className="text-xl font-semibold text-zinc-900">Source MySQL</h2>
+        <h2 id={titleId} className="text-xl font-semibold text-zinc-900">MySQL source</h2>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <Label htmlFor={nameId}>Nombre</Label>
+            <Label htmlFor={nameId}>Name</Label>
             <Input
               id={nameId}
               value={name}
@@ -95,7 +95,7 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
             />
           </div>
           <div>
-            <Label htmlFor={queryId}>Query SQL</Label>
+            <Label htmlFor={queryId}>SQL query</Label>
             <textarea
               id={queryId}
               value={query}
@@ -113,7 +113,7 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
               disabled={validate.isPending}
               className="mt-1"
             >
-              {validate.isPending ? 'Validando…' : 'Validar query'}
+              {validate.isPending ? 'Validating…' : 'Validate query'}
             </Button>
             {validationMsg !== null && (
               <p
@@ -127,7 +127,7 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
             )}
           </div>
           <div>
-            <Label htmlFor={tplId}>Template por fila</Label>
+            <Label htmlFor={tplId}>Row template</Label>
             <textarea
               id={tplId}
               value={rowTemplate}
@@ -138,7 +138,7 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
             />
             {/* zinc-600 = 7.1:1 on white — passes AA. zinc-500 was borderline. */}
             <p className="mt-1 text-xs text-zinc-600">
-              Tokens disponibles: cualquier columna devuelta por la query como {'{{column}}'}.
+              Available tokens: any column returned by the query, referenced as {'{{column}}'}.
             </p>
           </div>
           {submitError !== null && (
@@ -146,10 +146,10 @@ export function MysqlQueryBuilder({ connectionId, connectionName, onClose }: Pro
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
+              Cancel
             </Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Creando…' : 'Crear source'}
+              {create.isPending ? 'Creating…' : 'Create source'}
             </Button>
           </div>
         </form>

@@ -25,17 +25,17 @@ export function OperatorComposer({ disabled, onSend }: Props): React.JSX.Element
   }
 
   const placeholder = disabled
-    ? 'Reclamá la conversación para responder'
-    : 'Escribí un mensaje…'
+    ? 'Claim the conversation to reply'
+    : 'Write a message…'
 
   return (
     <form
       onSubmit={(e) => { void submit(e) }}
       className="border-t border-zinc-200 bg-white p-3"
-      aria-label="Composer del operador"
+      aria-label="Operator composer"
     >
       <label htmlFor={textareaId} className="sr-only">
-        Mensaje del operador
+        Operator message
       </label>
       <textarea
         id={textareaId}
@@ -58,7 +58,7 @@ export function OperatorComposer({ disabled, onSend }: Props): React.JSX.Element
           size="sm"
           disabled={disabled || busy || text.trim().length === 0}
         >
-          {busy ? 'Enviando…' : 'Enviar'}
+          {busy ? 'Sending…' : 'Send'}
         </Button>
       </div>
     </form>

@@ -56,7 +56,7 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
       onCreated({ id: conn.id, name: conn.name })
     },
     onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : 'Error al crear la conexión')
+      setError(err instanceof Error ? err.message : 'Failed to create connection')
     },
   })
 
@@ -94,10 +94,10 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
       <Card className="w-full max-w-md space-y-4 p-6">
-        <h2 id={titleId} className="text-xl font-semibold text-zinc-900">Conectar MySQL</h2>
+        <h2 id={titleId} className="text-xl font-semibold text-zinc-900">Connect MySQL</h2>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <Label htmlFor={nameId}>Nombre</Label>
+            <Label htmlFor={nameId}>Name</Label>
             <Input
               id={nameId}
               value={form.name}
@@ -115,7 +115,7 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
             />
           </div>
           <div>
-            <Label htmlFor={portId}>Puerto</Label>
+            <Label htmlFor={portId}>Port</Label>
             <Input
               id={portId}
               type="number"
@@ -127,7 +127,7 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
             />
           </div>
           <div>
-            <Label htmlFor={dbId}>Base de datos</Label>
+            <Label htmlFor={dbId}>Database</Label>
             <Input
               id={dbId}
               value={form.database}
@@ -136,7 +136,7 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
             />
           </div>
           <div>
-            <Label htmlFor={userId}>Usuario</Label>
+            <Label htmlFor={userId}>User</Label>
             <Input
               id={userId}
               value={form.user}
@@ -146,7 +146,7 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
             />
           </div>
           <div>
-            <Label htmlFor={passId}>Contraseña</Label>
+            <Label htmlFor={passId}>Password</Label>
             <Input
               id={passId}
               type="password"
@@ -169,10 +169,10 @@ export function MysqlConnectionModal({ onClose, onCreated }: Props): React.JSX.E
           {error !== null && <p role="alert" className="text-sm text-red-700">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
+              Cancel
             </Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Creando…' : 'Crear conexión'}
+              {create.isPending ? 'Creating…' : 'Create connection'}
             </Button>
           </div>
         </form>

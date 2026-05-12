@@ -36,7 +36,7 @@ const STATUS_BADGES: Record<string, string> = {
 const FILTER_OPTIONS: readonly StatusFilter[] = ['all', 'handoff_requested', 'active_operator', 'active_ai']
 
 function filterLabel(f: StatusFilter): string {
-  if (f === 'all') return 'Todas'
+  if (f === 'all') return 'All'
   return STATUS_LABELS[f] ?? f
 }
 
@@ -45,19 +45,19 @@ export function SessionList({ sessions, selectedId, onSelect, filter, onFilter }
 
   return (
     <section
-      aria-label="Lista de conversaciones"
+      aria-label="Conversation list"
       className="flex w-72 flex-col border-r border-zinc-200 bg-white"
     >
       <div className="border-b border-zinc-200 px-4 py-3">
-        <h2 className="font-semibold text-zinc-900">Conversaciones</h2>
+        <h2 className="font-semibold text-zinc-900">Conversations</h2>
         {/* zinc-600 = 7.1:1 on white (AA pass). zinc-500 fails. */}
         <div className="text-xs text-zinc-600">
-          {sessions.length} total · {filtered.length} visibles
+          {sessions.length} total · {filtered.length} visible
         </div>
       </div>
       <div
         role="group"
-        aria-label="Filtros de conversación"
+        aria-label="Conversation filters"
         className="flex gap-1 border-b border-zinc-200 px-2 py-1 text-xs"
       >
         {FILTER_OPTIONS.map((f) => (
@@ -80,7 +80,7 @@ export function SessionList({ sessions, selectedId, onSelect, filter, onFilter }
       </div>
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
-          <p className="p-6 text-center text-sm text-zinc-600">Sin sesiones.</p>
+          <p className="p-6 text-center text-sm text-zinc-600">No sessions.</p>
         ) : (
           <ul className="flex flex-col">
             {filtered.map((s) => (

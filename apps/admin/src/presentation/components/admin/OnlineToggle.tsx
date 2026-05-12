@@ -69,8 +69,8 @@ export function OnlineToggle(): React.JSX.Element {
         onClick={handleClick}
         disabled={setOnline.isPending}
         aria-pressed={isOnline}
-        title={isOnline ? 'Online — click para desconectarse' : 'Offline — click para conectarse'}
-        aria-label={isOnline ? 'Operador en línea — clic para desconectarse' : 'Operador desconectado — clic para conectarse'}
+        title={isOnline ? 'Online — click to go offline' : 'Offline — click to go online'}
+        aria-label={isOnline ? 'Operator online — click to go offline' : 'Operator offline — click to go online'}
         className={cn(
           'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2',
@@ -95,13 +95,12 @@ export function OnlineToggle(): React.JSX.Element {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
         >
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
-            <h2 id={titleId} className="mb-2 text-lg font-semibold text-zinc-900">¿Pasar a offline?</h2>
+            <h2 id={titleId} className="mb-2 text-lg font-semibold text-zinc-900">Go offline?</h2>
             <p id={bodyId} className="mb-4 text-sm text-zinc-700">
-              Tenés{' '}
+              You have{' '}
               <strong>{confirming.activeCount}</strong>{' '}
-              sesión{confirming.activeCount === 1 ? '' : 'es'} activa
-              {confirming.activeCount === 1 ? '' : 's'} con vos.
-              Al pasar a offline, los visitantes pasarán al AI.
+              active session{confirming.activeCount === 1 ? '' : 's'}.
+              Going offline routes visitors back to the AI.
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -109,14 +108,14 @@ export function OnlineToggle(): React.JSX.Element {
                 onClick={() => { setConfirming(null) }}
                 className="rounded border border-zinc-400 px-3 py-1 text-sm text-zinc-800 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={() => { setOnline.mutate(false) }}
                 className="rounded bg-red-700 px-3 py-1 text-sm text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
               >
-                Continuar
+                Continue
               </button>
             </div>
           </div>
