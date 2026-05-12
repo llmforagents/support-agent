@@ -1,12 +1,13 @@
 /**
  * i18n.ts — minimal translation boundary for the widget embed app.
  *
- * Reads the browser locale (or falls back to 'en') and returns a `t` function
- * that looks up keys in the matching message catalog. No external dependencies.
+ * Default locale is English. Sites that want Spanish opt in by adding
+ * `data-lang="es"` to the widget script tag — bootstrap.ts forwards the
+ * choice to the iframe as `?lang=es` and we read it here.
  *
- * Usage:
- *   import { t } from '../lib/i18n'
- *   <p>{t('widget.greeting')}</p>
+ * Auto-detection from `navigator.language` was removed deliberately: visitors
+ * on Spanish-set browsers were seeing Spanish even on English-only sites,
+ * mixing UI languages with the agent's own replies.
  */
 
 import en from './messages.en'
@@ -23,13 +24,16 @@ const CATALOGS: Readonly<Record<string, MessageCatalog>> = {
   es: es as MessageCatalog,
 }
 
-function detectLocale(): string {
-  const raw = (typeof navigator !== 'undefined' ? navigator.language : undefined) ?? 'en'
-  const primary = raw.split('-')[0]?.toLowerCase() ?? 'en'
-  return primary in CATALOGS ? primary : 'en'
+function resolveLocale(): string {
+  if (typeof window === 'undefined') return 'en'
+  try {
+    const param = new URLSearchParams(window.location.search).get('lang')
+    if (param && param in CATALOGS) return param
+  } catch { /* ignore */ }
+  return 'en'
 }
 
-const catalog: MessageCatalog = CATALOGS[detectLocale()] ?? (en as MessageCatalog)
+const catalog: MessageCatalog = CATALOGS[resolveLocale()] ?? (en as MessageCatalog)
 
 /**
  * Look up a message key.

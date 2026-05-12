@@ -23,7 +23,9 @@ declare global {
   }
 }
 
-function readFromScriptTag(): { key: string; baseUrl: string } | null {
+type TagInfo = { key: string; baseUrl: string; lang: string | null }
+
+function readFromScriptTag(): TagInfo | null {
   // `currentScript` points at the <script> still executing (this bundle).
   // Falls back to a broader query in case the bundle was loaded in a way
   // that nulls currentScript (module preload, dynamic import, etc.).
@@ -34,20 +36,23 @@ function readFromScriptTag(): { key: string; baseUrl: string } | null {
   if (key.length === 0) return null
   let baseUrl = ''
   try { baseUrl = new URL(tag.src).origin } catch { /* relative src; leave empty */ }
-  return { key, baseUrl }
+  // Optional locale override; defaults to English inside the embed app.
+  const lang = tag.dataset['lang'] ?? tag.getAttribute('data-lang')
+  return { key, baseUrl, lang }
 }
 
 const fromTag = readFromScriptTag()
 const SITE_KEY = window.__SITE_KEY__ ?? fromTag?.key
 const BASE_URL = window.__WIDGET_BASE_URL__ ?? fromTag?.baseUrl ?? ''
+const LANG = fromTag?.lang ?? null
 
 if (!SITE_KEY) {
   console.warn('[llm4agents widget] missing site key — add data-site-key="..." to the <script> tag or set window.__SITE_KEY__ before loading widget.js')
 } else {
-  mount(SITE_KEY, BASE_URL)
+  mount(SITE_KEY, BASE_URL, LANG)
 }
 
-function mount(siteKey: string, baseUrl: string): void {
+function mount(siteKey: string, baseUrl: string, lang: string | null): void {
   // Host element — sits in the page DOM but renders into a shadow root
   const host = document.createElement('div')
   host.id = 'llm4agents-widget-host'
@@ -90,7 +95,7 @@ function mount(siteKey: string, baseUrl: string): void {
     open = !open
 
     if (!iframe) {
-      iframe = createIframe(siteKey, baseUrl, dialogIframeId)
+      iframe = createIframe(siteKey, baseUrl, dialogIframeId, lang)
       shadow.appendChild(iframe)
     }
 
@@ -150,12 +155,13 @@ function setButtonIcon(btn: HTMLButtonElement, icon: 'chat' | 'close'): void {
   btn.appendChild(svg)
 }
 
-function createIframe(siteKey: string, baseUrl: string, id: string): HTMLIFrameElement {
+function createIframe(siteKey: string, baseUrl: string, id: string, lang: string | null): HTMLIFrameElement {
   const iframe = document.createElement('iframe')
   iframe.id = id
   // Load the static widget shell (embed.html) and pass the site key via query.
   // The shell reads it from location.search at boot — see embed-app.tsx.
-  iframe.src = `${baseUrl}/embed.html?siteKey=${encodeURIComponent(siteKey)}`
+  const langSuffix = lang !== null && lang.length > 0 ? `&lang=${encodeURIComponent(lang)}` : ''
+  iframe.src = `${baseUrl}/embed.html?siteKey=${encodeURIComponent(siteKey)}${langSuffix}`
   iframe.title = 'Support chat'
   iframe.allow = 'clipboard-write'
   iframe.style.cssText = [
