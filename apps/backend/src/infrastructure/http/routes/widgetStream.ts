@@ -33,9 +33,12 @@ export function widgetStreamRoutes(c: Container): Hono {
     try { sessionId = SessionId(ctx.req.param('id') ?? '') } catch { return ctx.json({ error: 'bad_id' }, 400) }
 
     const token = ctx.req.query('token') ?? ''
-    const visitorIdHeader = ctx.req.header('X-Visitor-Id') ?? ''
+    // EventSource can't set custom headers, so the widget passes visitorId
+    // as a query param. Accept either source — header takes precedence for
+    // any future fetch-based caller.
+    const visitorIdRaw = ctx.req.header('X-Visitor-Id') ?? ctx.req.query('visitorId') ?? ''
     let visitorId
-    try { visitorId = VisitorId(visitorIdHeader) } catch {
+    try { visitorId = VisitorId(visitorIdRaw) } catch {
       return ctx.json({ error: 'missing_visitor_id' }, 400)
     }
     const v = verifyStreamToken(token, { sessionId, visitorId }, c.env.STREAM_TOKEN_SECRET)

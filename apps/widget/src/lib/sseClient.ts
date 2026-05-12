@@ -61,13 +61,13 @@ export function connectSse(opts: SseClientOptions): SseClient {
     baseUrl !== '' ? baseUrl : window.location.origin,
   )
   url.searchParams.set('token', streamToken)
+  // EventSource has no custom-header API, so we ship the visitor id as a
+  // query param. The backend reconstructs the stream-token payload as
+  // { sessionId, visitorId } and verifies the HMAC against it — a forged
+  // visitorId fails signature check and the stream is rejected.
+  url.searchParams.set('visitorId', visitorId)
 
   const es = new EventSource(url.toString())
-
-  // EventSource does not support custom headers natively; visitorId is sent
-  // via the stream token (already encoded by the backend). We keep the
-  // parameter in the signature for potential future use with fetch-based SSE.
-  void visitorId
 
   es.addEventListener('message', (ev) => {
     let raw: unknown
