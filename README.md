@@ -1,6 +1,5 @@
 # support-llm4agents
 
-[![CI](https://github.com/llmforagents/support-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/llmforagents/support-agent/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](.nvmrc)
 [![Release](https://img.shields.io/github/v/tag/llmforagents/support-agent?sort=semver&label=release)](https://github.com/llmforagents/support-agent/releases)
