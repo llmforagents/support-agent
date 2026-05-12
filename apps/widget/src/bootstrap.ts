@@ -1,10 +1,16 @@
 /**
  * bootstrap.ts — vanilla DOM bootstrap script (IIFE build).
  *
- * Injected by the site owner as a single <script src="/widget.js"> tag.
- * Reads window.__SITE_KEY__ (set by the backend's /embed/:siteKey template),
- * creates a shadow root to isolate styles, then mounts a launcher button +
- * an iframe that loads the full Preact embed app.
+ * Injected by the site owner via one of two equivalent snippet styles:
+ *
+ *   1) Recommended one-liner (what the onboarding wizard hands out):
+ *      <script src="https://.../widget.js" data-site-key="abc123..." async></script>
+ *
+ *   2) Globals (legacy / iframe demo template):
+ *      <script>window.__SITE_KEY__ = 'abc123...'</script>
+ *      <script src="https://.../widget.js"></script>
+ *
+ * Either path produces the same launcher button + iframe-mounted Preact app.
  */
 
 // Make this file a module so the global augmentation is valid
@@ -17,12 +23,26 @@ declare global {
   }
 }
 
-const SITE_KEY = window.__SITE_KEY__
-const BASE_URL = window.__WIDGET_BASE_URL__ ?? ''
+function readFromScriptTag(): { key: string; baseUrl: string } | null {
+  // `currentScript` points at the <script> still executing (this bundle).
+  // Falls back to a broader query in case the bundle was loaded in a way
+  // that nulls currentScript (module preload, dynamic import, etc.).
+  const cs = document.currentScript as HTMLScriptElement | null
+  const tag = cs ?? document.querySelector<HTMLScriptElement>('script[data-site-key]')
+  if (!tag) return null
+  const key = tag.dataset['siteKey'] ?? tag.getAttribute('data-site-key') ?? ''
+  if (key.length === 0) return null
+  let baseUrl = ''
+  try { baseUrl = new URL(tag.src).origin } catch { /* relative src; leave empty */ }
+  return { key, baseUrl }
+}
+
+const fromTag = readFromScriptTag()
+const SITE_KEY = window.__SITE_KEY__ ?? fromTag?.key
+const BASE_URL = window.__WIDGET_BASE_URL__ ?? fromTag?.baseUrl ?? ''
 
 if (!SITE_KEY) {
-  // End-user-facing diagnostic: tells the site owner their snippet is misconfigured.
-  console.warn('[llm4agents widget] missing __SITE_KEY__ — widget disabled')
+  console.warn('[llm4agents widget] missing site key — add data-site-key="..." to the <script> tag or set window.__SITE_KEY__ before loading widget.js')
 } else {
   mount(SITE_KEY, BASE_URL)
 }
